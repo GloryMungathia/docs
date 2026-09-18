@@ -1,0 +1,307 @@
+---
+title: "Produce Listing and Pool Endpoints — Pamodzi API Reference"
+sidebarTitle: "Produce"
+description: "REST API reference for produce listing and produce pool endpoints — list produce via API, view pool status, and manage verification states for farmer listings."
+---
+
+Produce listing endpoints manage the farmer supply side of the platform. While farmers typically create listings via the USSD interface using their mobile phones, the API provides programmatic access for cooperative agents and admins to list, inspect, verify, and manage those listings. Produce pools are the aggregation layer that connects individual farmer listings to an active demand campaign.
+
+<Note>
+  Farmers list produce via the USSD interface. The API produce endpoints are primarily used by cooperative agents for verification workflows and by admins for platform oversight.
+</Note>
+
+<Note>
+  For the complete endpoint list — including produce listing creation, update, archiving, and pool allocation trigger — refer to the interactive Swagger docs at [https://pamodzi-bbe9f0671866.herokuapp.com/docs](https://pamodzi-bbe9f0671866.herokuapp.com/docs).
+</Note>
+
+---
+
+## Produce Listing Status Values
+
+Each produce listing moves through the following status values as it progresses through the platform flow:
+
+| Status            | Description                                                                              |
+|-------------------|------------------------------------------------------------------------------------------|
+| `not_aggregated`  | The listing exists but has not yet been matched to any campaign pool.                    |
+| `aggregated`      | The listing has been allocated to a campaign's produce pool and is awaiting verification.|
+| `approved`        | An agent has physically verified the listing — weight, moisture, and grade confirmed.    |
+| `rejected`        | The listing failed verification and has been excluded from the pool.                     |
+| `archived`        | The listing has been archived and is no longer visible in active views.                  |
+
+---
+
+## GET /produce-listings/
+
+Returns all produce listings on the platform. You can use this endpoint to review the full supply-side picture across all cooperatives and campaigns.
+
+**Authentication required:** Admin or Agent Bearer token
+
+<ResponseField name="produce_id" type="string">
+  UUID of the produce listing.
+</ResponseField>
+
+<ResponseField name="farmer_id" type="string">
+  UUID of the farmer who submitted the listing.
+</ResponseField>
+
+<ResponseField name="cooperative_id" type="string">
+  UUID of the cooperative the farmer belongs to.
+</ResponseField>
+
+<ResponseField name="crop_type" type="string">
+  The crop type offered. One of `maize`, `sorghum`, `groundnuts`, `millet`.
+</ResponseField>
+
+<ResponseField name="quantity_kg" type="number">
+  Quantity offered by the farmer in kilograms.
+</ResponseField>
+
+<ResponseField name="listing_status" type="string">
+  Current status of the listing. One of `not_aggregated`, `aggregated`, `approved`, `rejected`, `archived`.
+</ResponseField>
+
+<ResponseField name="province" type="string">
+  Province from which the produce is available.
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 timestamp of when the listing was created.
+</ResponseField>
+
+```bash
+curl -X GET https://pamodzi-bbe9f0671866.herokuapp.com/produce-listings/ \
+  -H "Authorization: Bearer <your-admin-or-agent-token>"
+```
+
+---
+
+## GET /produce-listings/{produce_id}
+
+Returns the full details for a single produce listing, identified by its UUID.
+
+**Authentication required:** Admin or Agent Bearer token
+
+<ParamField path="produce_id" type="string" required>
+  UUID of the produce listing to retrieve.
+</ParamField>
+
+<ResponseField name="produce_id" type="string">
+  UUID of the listing.
+</ResponseField>
+
+<ResponseField name="farmer_id" type="string">
+  UUID of the farmer who submitted the listing.
+</ResponseField>
+
+<ResponseField name="cooperative_id" type="string">
+  UUID of the farmer's cooperative.
+</ResponseField>
+
+<ResponseField name="crop_type" type="string">
+  Crop type offered.
+</ResponseField>
+
+<ResponseField name="quantity_kg" type="number">
+  Quantity offered in kilograms.
+</ResponseField>
+
+<ResponseField name="listing_status" type="string">
+  Current status of the listing.
+</ResponseField>
+
+<ResponseField name="grade" type="string">
+  Grade assigned at verification. Null before verification.
+</ResponseField>
+
+<ResponseField name="moisture_content" type="number">
+  Moisture content recorded at verification. Null before verification.
+</ResponseField>
+
+<ResponseField name="actual_weight" type="number">
+  Physical weight recorded by the agent at verification. Null before verification.
+</ResponseField>
+
+<ResponseField name="province" type="string">
+  Province of origin.
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 timestamp of listing creation.
+</ResponseField>
+
+```bash
+curl -X GET https://pamodzi-bbe9f0671866.herokuapp.com/produce-listings/b2c3d4e5-f6a7-8901-bcde-f23456789012 \
+  -H "Authorization: Bearer <your-admin-or-agent-token>"
+```
+
+---
+
+## POST /produce-pools/verify-listing/{produce_id}
+
+Approves or rejects an individual produce listing within a campaign pool. The agent physically inspects the produce — weighing it and measuring moisture content — then submits the outcome via this endpoint. Approved listings contribute their `actual_weight` toward the campaign's pool total; rejected listings are excluded.
+
+**Authentication required:** Agent Bearer token
+
+<ParamField path="produce_id" type="string" required>
+  UUID of the produce listing to verify.
+</ParamField>
+
+<ParamField body="produce_status" type="string" required>
+  Verification outcome. Use `"approved"` to accept the listing or `"rejected"` to exclude it from the pool.
+</ParamField>
+
+<ParamField body="actual_weight" type="number" required>
+  The physically measured weight in kilograms. This value — not the farmer's declared quantity — is used for pool calculation and payout.
+</ParamField>
+
+<ParamField body="grade" type="string" required>
+  Grade assigned by the agent after physical inspection. One of `A`, `B`, `C`.
+</ParamField>
+
+<ParamField body="moisture_content" type="number" required>
+  Measured moisture content as a percentage. Listings above the campaign's `moisture_content` threshold should be rejected.
+</ParamField>
+
+<ResponseField name="message" type="string">
+  A confirmation message indicating the verification outcome was recorded.
+</ResponseField>
+
+<ResponseField name="produce_id" type="string">
+  UUID of the verified listing.
+</ResponseField>
+
+<ResponseField name="listing_status" type="string">
+  Updated listing status — `"approved"` or `"rejected"`.
+</ResponseField>
+
+```bash
+curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/produce-pools/verify-listing/b2c3d4e5-f6a7-8901-bcde-f23456789012 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your-agent-token>" \
+  -d '{
+    "produce_status": "approved",
+    "actual_weight": 490.5,
+    "grade": "A",
+    "moisture_content": 12.8
+  }'
+```
+
+---
+
+## GET /produce-pools/
+
+Returns all produce pools. Each pool represents the aggregation of farmer listings matched to a single demand campaign. Use this endpoint to get a platform-wide view of pool status across all active campaigns.
+
+**Authentication required:** Admin, Buyer, or Agent Bearer token
+
+<ResponseField name="pool_id" type="string">
+  UUID of the produce pool.
+</ResponseField>
+
+<ResponseField name="campaign_id" type="string">
+  UUID of the demand campaign this pool is attached to.
+</ResponseField>
+
+<ResponseField name="total_allocated_kg" type="number">
+  Total kilograms currently allocated to this pool (sum of all `aggregated` or `approved` listing quantities).
+</ResponseField>
+
+<ResponseField name="total_approved_kg" type="number">
+  Total kilograms from verified and approved listings.
+</ResponseField>
+
+<ResponseField name="province" type="string">
+  Province for this pool.
+</ResponseField>
+
+```bash
+curl -X GET https://pamodzi-bbe9f0671866.herokuapp.com/produce-pools/ \
+  -H "Authorization: Bearer <your-admin-or-agent-token>"
+```
+
+---
+
+## GET /produce-pools/{produce_pool_id}
+
+Returns detailed information for a single produce pool, including individual listing statuses, total allocated weight, and pool fulfilment progress relative to the campaign target.
+
+**Authentication required:** Admin, Buyer, or Agent Bearer token
+
+<ParamField path="produce_pool_id" type="string" required>
+  UUID of the produce pool to retrieve.
+</ParamField>
+
+<ResponseField name="pool_id" type="string">
+  UUID of the produce pool.
+</ResponseField>
+
+<ResponseField name="campaign_id" type="string">
+  UUID of the associated demand campaign.
+</ResponseField>
+
+<ResponseField name="total_allocated_kg" type="number">
+  Total kilograms allocated to this pool.
+</ResponseField>
+
+<ResponseField name="total_approved_kg" type="number">
+  Total kilograms from verified and approved listings.
+</ResponseField>
+
+<ResponseField name="listings" type="array">
+  Array of produce listing summaries included in this pool.
+
+  <Expandable title="listing fields">
+    <ResponseField name="produce_id" type="string">
+      UUID of the produce listing.
+    </ResponseField>
+    <ResponseField name="farmer_id" type="string">
+      UUID of the farmer.
+    </ResponseField>
+    <ResponseField name="listing_status" type="string">
+      Current status of this listing within the pool.
+    </ResponseField>
+    <ResponseField name="actual_weight" type="number">
+      Verified weight in kilograms. Null until verification.
+    </ResponseField>
+    <ResponseField name="grade" type="string">
+      Assigned grade. Null until verification.
+    </ResponseField>
+    <ResponseField name="moisture_content" type="number">
+      Measured moisture content. Null until verification.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+```bash
+curl -X GET https://pamodzi-bbe9f0671866.herokuapp.com/produce-pools/c3d4e5f6-a7b8-9012-cdef-345678901234 \
+  -H "Authorization: Bearer <your-admin-or-buyer-or-agent-token>"
+```
+
+---
+
+## POST /produce-pools/trigger-allocation/{campaign_id}
+
+Manually triggers the allocation engine for a specific campaign, matching eligible `not_aggregated` farmer listings to the campaign's pool based on crop type, grade, province, and cooperative. Under normal operation the platform runs allocation automatically; use this endpoint to force a re-run after manual data corrections.
+
+**Authentication required:** Admin Bearer token
+
+<ParamField path="campaign_id" type="string" required>
+  UUID of the campaign to run allocation for.
+</ParamField>
+
+<ResponseField name="status" type="string">
+  Outcome of the allocation run, e.g. `"allocation_complete"`.
+</ResponseField>
+
+<ResponseField name="live_buyer_view_total_kg" type="number">
+  Total kilograms now visible in the buyer's pool view after allocation.
+</ResponseField>
+
+<ResponseField name="matched_province" type="string">
+  The province against which listings were matched.
+</ResponseField>
+
+```bash
+curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/produce-pools/trigger-allocation/a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
+  -H "Authorization: Bearer <your-admin-token>"
+```

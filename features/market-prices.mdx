@@ -1,0 +1,52 @@
+---
+title: "Market Prices: Track Crop Prices Across Zambian Provinces"
+sidebarTitle: "Market Prices"
+description: "Pamodzi provides reference market prices for maize, sorghum, groundnuts, and millet across all Zambian provinces — updated regularly to help buyers and agents make informed decisions."
+---
+
+Pamodzi's market price feature gives you access to current and historical commodity prices by crop type and province. Prices are displayed per 50 kg and updated on a regular schedule, giving buyers and cooperative agents a reliable reference point when planning campaigns and negotiations.
+
+## Supported Crops
+
+Pamodzi tracks reference prices for the four crop types available on the platform. Each crop has a consistent color in all charts and price displays so you can identify them at a glance.
+
+| Crop | Chart color |
+|---|---|
+| **Maize** | Bright green |
+| **Sorghum** | Pink |
+| **Groundnuts** | Brown / maroon |
+| **Millet** | Olive / yellow-green |
+
+## Accessing Market Prices
+
+You can view market prices from any of the following places, depending on how you use Pamodzi.
+
+<Tabs>
+  <Tab title="Mobile App">
+    Tap **Market Prices** in the bottom navigation bar. Select a province from the dropdown to filter prices by region, and use the crop legend to identify each line on the chart.
+  </Tab>
+  <Tab title="Admin Dashboard">
+    Go to **Market Prices** in the left sidebar. The dashboard displays the same charts and province filters available in the mobile app, with additional export options.
+  </Tab>
+  <Tab title="API">
+    Call `GET /market-prices/current` to retrieve the latest prices programmatically. See the [Market Prices API Reference](/api/market-prices) for request parameters and response format.
+  </Tab>
+</Tabs>
+
+## Reading the Price Charts
+
+Market prices are displayed as line charts, with one line per crop type for the selected province. The color-coded legend (labeled **KEY:**) identifies each crop by its chart color. All prices are shown in **ZMW per 50 kg**.
+
+To compare prices across provinces, change the province selection using the dropdown filter — the chart updates immediately to reflect the selected region.
+
+<Tip>
+  Use market prices as a reference when setting the total amount for a new demand campaign. Competitive pricing aligned to current market rates helps attract more farmer listings faster.
+</Tip>
+
+## Price Updates
+
+Market prices are refreshed on a regular automated schedule. Historical prices are retained so you can review trends over time — useful for spotting seasonal patterns in crop pricing across provinces.
+
+<Note>
+  Market prices are reference data only. The actual transaction price for any produce is the amount set by the buyer when creating their demand campaign — not the market price shown here.
+</Note>

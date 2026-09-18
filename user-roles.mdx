@@ -1,0 +1,35 @@
+---
+title: "User Roles and Permissions on Pamodzi"
+sidebarTitle: "User Roles"
+description: "Pamodzi supports four distinct roles: Farmer, Cooperative Agent, Wholesale Buyer, and Administrator. Each role has a dedicated interface and set of capabilities."
+---
+
+Pamodzi uses role-based access to make sure every user sees only what is relevant to them and can take only the actions appropriate to their position in the value chain. When you register on Pamodzi, you are assigned one of four roles — Farmer, Cooperative Agent, Wholesale Buyer, or Administrator. Your role determines which interface you use, what you can see, and what actions you can take.
+
+## The Four Roles
+
+<CardGroup cols={2}>
+  <Card title="Farmer" icon="mobile" href="/getting-started/farmers">
+    List your available crops from any basic mobile phone using the USSD menu. No smartphone or internet connection required. Receive SMS confirmations and payment notifications at every stage.
+  </Card>
+  <Card title="Wholesale Buyer" icon="cart-shopping" href="/getting-started/buyers">
+    Create and fund demand campaigns that specify exactly what produce you need. Track campaign fulfilment in real time, view market prices by province, and arrange pickup once your pool is complete.
+  </Card>
+  <Card title="Cooperative Agent" icon="users" href="/getting-started/agents">
+    Manage field operations for your cooperative. Register farmers, enter produce listings on their behalf, verify produce quality at the hub, and coordinate disbursals after a buyer collects.
+  </Card>
+  <Card title="Administrator" icon="shield" href="/admin/overview">
+    Oversee the entire platform through the secure web dashboard. Manage users, cooperatives, demand campaigns, and financial transactions, with full audit visibility across all roles.
+  </Card>
+</CardGroup>
+
+## Role Capabilities
+
+Use the table below to compare what each role can do, which interface they use, and how they authenticate.
+
+| Role | Interface | Primary Actions | Authentication Method |
+|---|---|---|---|
+| Farmer | USSD (any mobile phone) | List produce, receive SMS confirmations | Phone number + 4-digit PIN |
+| Cooperative Agent | Mobile app | Register farmers, verify produce, manage disbursals | Staff ID + password |
+| Wholesale Buyer | Mobile app | Create demand campaigns, track fulfilment, view market prices | Email + password + OTP |
+| Administrator | Web dashboard (PWA) | Manage users, cooperatives, campaigns, and finances | Email + password + MFA |

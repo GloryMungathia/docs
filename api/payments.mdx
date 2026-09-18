@@ -1,0 +1,287 @@
+---
+title: "Payment Transaction Endpoints — Pamodzi API Reference"
+sidebarTitle: "Payments"
+description: "REST API reference for Pamodzi payment endpoints — view transaction history, check merchant account balance, and track payout status for campaigns."
+---
+
+The payment endpoints give buyers and admins visibility into the full payment lifecycle — from campaign funding through payout disbursement to cooperatives and farmers. All payments are processed via Flutterwave. The platform retains a 5% fee from the gross campaign amount and releases the remaining 95% as the net payout to the cooperative after produce is verified and collected.
+
+<Note>
+  All payments are processed via Flutterwave. For payment disputes or failed transactions, use the Flutterwave reference ID returned in the transaction record to open a support case with Flutterwave directly.
+</Note>
+
+---
+
+## Payment Transaction Status Values
+
+| Status       | Description                                                                                  |
+|--------------|----------------------------------------------------------------------------------------------|
+| `processing` | The transaction has been initiated and is awaiting confirmation from Flutterwave.            |
+| `completed`  | The transaction was confirmed and funds have been settled.                                   |
+| `failed`     | The transaction was rejected or timed out. Check the Flutterwave reference for details.      |
+| `refunded`   | The transaction amount was returned to the originating payment method.                       |
+
+---
+
+## Transaction Fields Reference
+
+| Field                  | Type    | Description                                                                          |
+|------------------------|---------|--------------------------------------------------------------------------------------|
+| `transaction_id`       | UUID    | Unique identifier for this transaction record.                                       |
+| `campaign_id`          | UUID    | The demand campaign this transaction is associated with.                             |
+| `buyer_id`             | UUID    | The wholesale buyer who originated the payment.                                      |
+| `cooperative_id`       | UUID    | The cooperative receiving the payout (on outgoing transactions).                    |
+| `amount`               | number  | Gross transaction amount in ZMW.                                                     |
+| `transaction_fee`      | number  | Flutterwave processing fee in ZMW.                                                   |
+| `platform_fee`         | number  | Pamodzi platform fee (5% of gross amount) retained before payout.                   |
+| `net_payout_amount`    | number  | Amount disbursed to the cooperative after platform fee deduction.                    |
+| `currency`             | string  | Always `"ZMW"` (Zambian Kwacha).                                                    |
+| `status`               | string  | Transaction status: `processing`, `completed`, `failed`, or `refunded`.             |
+| `type`                 | string  | Transaction direction: `payment` (buyer in) or `payout` (cooperative out).          |
+| `mobile_money_provider`| string  | Mobile money network used for the transaction (e.g. `MTN`, `Airtel`).               |
+
+---
+
+## POST /payments/initiate
+
+Initiates a Flutterwave payment for a demand campaign. Call this after creating a campaign to begin the payment flow. The response includes a Flutterwave redirect URL — redirect the buyer to that URL to complete payment on the Flutterwave hosted page.
+
+**Authentication required:** Buyer Bearer token
+
+<ParamField body="campaign_id" type="string" required>
+  UUID of the demand campaign to fund.
+</ParamField>
+
+<ParamField body="amount" type="number" required>
+  Payment amount in ZMW. Must match the campaign's declared amount.
+</ParamField>
+
+<ParamField body="mobile_money_provider" type="string">
+  Mobile money provider for the payment (e.g. `"MTN"`, `"Airtel"`). Optional — if omitted, the Flutterwave hosted page lets the buyer choose.
+</ParamField>
+
+<ResponseField name="transaction_id" type="string">
+  UUID of the newly created transaction record.
+</ResponseField>
+
+<ResponseField name="payment_link" type="string">
+  Flutterwave redirect URL. Redirect your buyer to this URL to complete the payment.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Initial transaction status, typically `"processing"`.
+</ResponseField>
+
+```bash
+curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/payments/initiate \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your-buyer-token>" \
+  -d '{
+    "campaign_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "amount": 34000.00,
+    "mobile_money_provider": "MTN"
+  }'
+```
+
+---
+
+## GET /payments/history
+
+Returns the payment transaction history for the authenticated user. Buyers see only their own transactions. Admins see all transactions across the platform.
+
+**Authentication required:** Admin or Buyer Bearer token
+
+<ResponseField name="transaction_id" type="string">
+  UUID of the transaction.
+</ResponseField>
+
+<ResponseField name="campaign_id" type="string">
+  UUID of the associated demand campaign.
+</ResponseField>
+
+<ResponseField name="buyer_id" type="string">
+  UUID of the buyer who initiated the payment.
+</ResponseField>
+
+<ResponseField name="cooperative_id" type="string">
+  UUID of the cooperative receiving the payout. Null on inbound payment transactions.
+</ResponseField>
+
+<ResponseField name="amount" type="number">
+  Gross transaction amount in ZMW.
+</ResponseField>
+
+<ResponseField name="platform_fee" type="number">
+  Pamodzi platform fee retained (5% of gross amount).
+</ResponseField>
+
+<ResponseField name="net_payout_amount" type="number">
+  Amount disbursed to the cooperative after fee deduction.
+</ResponseField>
+
+<ResponseField name="currency" type="string">
+  Always `"ZMW"`.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Transaction status: `processing`, `completed`, `failed`, or `refunded`.
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Transaction type: `payment` (buyer to platform) or `payout` (platform to cooperative).
+</ResponseField>
+
+<ResponseField name="mobile_money_provider" type="string">
+  Mobile money network used.
+</ResponseField>
+
+```bash
+curl -X GET https://pamodzi-bbe9f0671866.herokuapp.com/payments/history \
+  -H "Authorization: Bearer <your-admin-or-buyer-token>"
+```
+
+---
+
+## GET /payments/verify/{internal_ref}
+
+Manually triggers a payment verification check against Flutterwave for a specific transaction reference. Use this to refresh the status of a `processing` transaction if the Flutterwave webhook has not updated the record automatically.
+
+**Authentication required:** Admin or Buyer Bearer token
+
+<ParamField path="internal_ref" type="string" required>
+  The internal Pamodzi transaction reference string (not the Flutterwave transaction ID).
+</ParamField>
+
+<ResponseField name="transaction_id" type="string">
+  UUID of the transaction record.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Updated transaction status as returned by Flutterwave.
+</ResponseField>
+
+<ResponseField name="amount" type="number">
+  Verified amount in ZMW.
+</ResponseField>
+
+```bash
+curl -X GET https://pamodzi-bbe9f0671866.herokuapp.com/payments/verify/TXN-20240115-001 \
+  -H "Authorization: Bearer <your-admin-or-buyer-token>"
+```
+
+---
+
+## POST /payments/payout/{campaign_id}/{cooperative_id}
+
+Processes a payout disbursement from the platform merchant account to a cooperative's mobile money account. Call this after produce has been verified and the buyer has collected. The platform retains its 5% fee and transfers the `net_payout_amount` to the cooperative.
+
+**Authentication required:** Admin Bearer token
+
+<ParamField path="campaign_id" type="string" required>
+  UUID of the demand campaign for which the payout is being processed.
+</ParamField>
+
+<ParamField path="cooperative_id" type="string" required>
+  UUID of the cooperative to receive the payout.
+</ParamField>
+
+<ParamField body="amount" type="number" required>
+  Gross payout amount in ZMW before fee deduction.
+</ParamField>
+
+<ParamField body="mobile_money_provider" type="string" required>
+  Mobile money provider for the payout (e.g. `"MTN"`, `"Airtel"`).
+</ParamField>
+
+<ParamField body="account_number" type="string" required>
+  Cooperative's registered mobile money account number.
+</ParamField>
+
+<ResponseField name="message" type="string">
+  A confirmation message indicating the payout has been initiated.
+</ResponseField>
+
+<ResponseField name="transaction_id" type="string">
+  UUID of the payout transaction record.
+</ResponseField>
+
+<ResponseField name="net_payout_amount" type="number">
+  The actual amount disbursed to the cooperative after the 5% platform fee is deducted.
+</ResponseField>
+
+```bash
+curl -X POST "https://pamodzi-bbe9f0671866.herokuapp.com/payments/payout/a1b2c3d4-e5f6-7890-abcd-ef1234567890/b2c3d4e5-f6a7-8901-bcde-f23456789012" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your-admin-token>" \
+  -d '{
+    "amount": 34000.00,
+    "mobile_money_provider": "MTN",
+    "account_number": "+260977000200"
+  }'
+```
+
+---
+
+## POST /payments/refund/{campaign_id}
+
+Initiates a refund for a demand campaign payment. Use this when a campaign is cancelled after payment has already been collected. The refund is processed via Flutterwave back to the buyer's original payment method.
+
+**Authentication required:** Admin or Buyer Bearer token
+
+<ParamField path="campaign_id" type="string" required>
+  UUID of the campaign whose payment should be refunded.
+</ParamField>
+
+<ResponseField name="message" type="string">
+  A confirmation message indicating the refund has been initiated.
+</ResponseField>
+
+<ResponseField name="transaction_id" type="string">
+  UUID of the refund transaction record.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Initial refund transaction status, typically `"processing"`.
+</ResponseField>
+
+<Warning>
+  Refunds are only available for campaigns in `cancelled` status. Attempting to refund an active or fulfilled campaign will return an error.
+</Warning>
+
+```bash
+curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/payments/refund/a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
+  -H "Authorization: Bearer <your-admin-or-buyer-token>"
+```
+
+---
+
+## GET /merchant-account/
+
+Returns the current balance and status of the Pamodzi platform merchant account on Flutterwave. This is the central account that receives buyer payments and holds funds until they are disbursed as cooperative payouts.
+
+**Authentication required:** Admin Bearer token
+
+<ResponseField name="account_id" type="string">
+  UUID of the merchant account record.
+</ResponseField>
+
+<ResponseField name="balance" type="number">
+  Current balance in ZMW held in the merchant account.
+</ResponseField>
+
+<ResponseField name="currency" type="string">
+  Always `"ZMW"`.
+</ResponseField>
+
+<ResponseField name="flutterwave_account_id" type="string">
+  The Flutterwave sub-account identifier linked to this merchant account.
+</ResponseField>
+
+<Tip>
+  For the complete payment endpoint list, refer to the interactive Swagger docs at [https://pamodzi-bbe9f0671866.herokuapp.com/docs](https://pamodzi-bbe9f0671866.herokuapp.com/docs).
+</Tip>
+
+```bash
+curl -X GET https://pamodzi-bbe9f0671866.herokuapp.com/merchant-account/ \
+  -H "Authorization: Bearer <your-admin-token>"
+```

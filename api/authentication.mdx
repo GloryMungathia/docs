@@ -1,0 +1,224 @@
+---
+title: "Authenticate API Requests to Pamodzi"
+sidebarTitle: "Authentication"
+description: "Pamodzi uses JWT Bearer tokens for API authentication. Learn how to obtain a token for your role — buyer, agent, or admin — and how to use it in your requests."
+---
+
+Pamodzi uses JWT (JSON Web Token) Bearer tokens for API authentication. Each user role has its own login endpoint, and some roles require two-factor authentication (2FA) before receiving a usable token. Once you have a token, include it as a Bearer token in the `Authorization` header of every protected request.
+
+## Authentication by Role
+
+The login flow differs depending on your role. Select your role below to see the exact steps.
+
+<Tabs>
+  <Tab title="Wholesale Buyer">
+    Wholesale buyers go through a two-step login. Your initial credentials return a short-lived 2FA session token — not a usable API token. You then verify your OTP to receive the final access token.
+
+    **Step 1 — Submit credentials**
+
+    POST your email and password to `/auth/login/buyer`:
+
+    ```bash
+    curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/auth/login/buyer \
+      -H "Content-Type: application/json" \
+      -d '{"email": "your@email.com", "password": "yourpassword"}'
+    ```
+
+    A successful response returns a temporary 2FA session token (valid for 5 minutes). An OTP code is dispatched to your registered phone number or email address out-of-band:
+
+    ```json
+    {
+      "twofa_session_token": "<temporary-session-token>"
+    }
+    ```
+
+    **Step 2 — Verify your OTP**
+
+    POST the session token and your OTP code to `/auth/verify-2fa`:
+
+    ```bash
+    curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/auth/verify-2fa \
+      -H "Content-Type: application/json" \
+      -d '{
+        "twofa_session_token": "<temporary-session-token>",
+        "otp_code": "<your-otp-code>"
+      }'
+    ```
+
+    On success, you receive your access token:
+
+    ```json
+    {
+      "access_token": "<your-jwt>",
+      "token_type": "bearer"
+    }
+    ```
+
+    Use this `access_token` as the Bearer token in all subsequent requests.
+  </Tab>
+
+  <Tab title="Cooperative Agent">
+    Cooperative agents authenticate in a single step using a `staff_id` and password. No 2FA is required.
+
+    POST your credentials to `/auth/login/agent`:
+
+    ```bash
+    curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/auth/login/agent \
+      -H "Content-Type: application/json" \
+      -d '{"staff_id": "your-staff-id", "password": "yourpassword"}'
+    ```
+
+    A successful response returns your access token immediately:
+
+    ```json
+    {
+      "access_token": "<your-jwt>",
+      "token_type": "bearer"
+    }
+    ```
+
+    Use this `access_token` as the Bearer token in all subsequent requests.
+  </Tab>
+
+  <Tab title="Farmer">
+    Farmers authenticate using a phone number and a 4-digit PIN in a single step.
+
+    POST your credentials to `/auth/login/farmer`:
+
+    ```bash
+    curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/auth/login/farmer \
+      -H "Content-Type: application/json" \
+      -d '{"phone_number": "+26097xxxxxxx", "pin": "1234"}'
+    ```
+
+    A successful response returns your access token immediately:
+
+    ```json
+    {
+      "access_token": "<your-jwt>",
+      "token_type": "bearer"
+    }
+    ```
+
+    <Note>
+      Farmers typically interact with Pamodzi through the USSD interface rather than directly via the API. Direct API access for farmers is available but is not the primary integration path.
+    </Note>
+  </Tab>
+
+  <Tab title="Administrator">
+    Administrators authenticate using OAuth2 form data and must complete a mandatory 2FA step before receiving a usable access token.
+
+    **Step 1 — Submit credentials**
+
+    POST your `username` and `password` as OAuth2 form data (not JSON) to `/auth/login/admin/form`:
+
+    ```bash
+    curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/auth/login/admin/form \
+      -H "Content-Type: application/x-www-form-urlencoded" \
+      -d "username=your@email.com&password=yourpassword"
+    ```
+
+    A successful response returns a temporary 2FA session token. An OTP code is dispatched to your registered contact out-of-band:
+
+    ```json
+    {
+      "twofa_session_token": "<temporary-session-token>"
+    }
+    ```
+
+    **Step 2 — Verify your OTP**
+
+    POST the session token and your OTP code to `/auth/verify-2fa`:
+
+    ```bash
+    curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/auth/verify-2fa \
+      -H "Content-Type: application/json" \
+      -d '{
+        "twofa_session_token": "<temporary-session-token>",
+        "otp_code": "<your-otp-code>"
+      }'
+    ```
+
+    On success, you receive your access token:
+
+    ```json
+    {
+      "access_token": "<your-jwt>",
+      "token_type": "bearer"
+    }
+    ```
+
+    Use this `access_token` as the Bearer token in all subsequent requests.
+  </Tab>
+</Tabs>
+
+## Using Your Token
+
+Once you have an `access_token`, pass it as a Bearer token in the `Authorization` header of every request to a protected endpoint.
+
+**Using curl:**
+
+```bash
+curl -H "Authorization: Bearer <your-access-token>" \
+  https://pamodzi-bbe9f0671866.herokuapp.com/farmers/
+```
+
+**Using Python (`requests`):**
+
+```python
+import requests
+
+BASE_URL = "https://pamodzi-bbe9f0671866.herokuapp.com"
+token = "<your-access-token>"
+
+headers = {
+    "Authorization": f"Bearer {token}",
+    "Content-Type": "application/json",
+}
+
+response = requests.get(f"{BASE_URL}/farmers/", headers=headers)
+print(response.json())
+```
+
+## Token Lifetime
+
+Tokens expire **2 hours** after they are issued. There is no refresh token mechanism — once your token expires, you must re-authenticate using the login endpoint for your role to obtain a new one.
+
+<Warning>
+  Tokens expire after 2 hours. If you receive a `401 Unauthorized` response on a request that was previously working, your token has expired. Log in again to get a new access token.
+</Warning>
+
+## Logging Out
+
+To end your session, POST to `/auth/logout` with your Bearer token in the header:
+
+```bash
+curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/auth/logout \
+  -H "Authorization: Bearer <your-access-token>"
+```
+
+A successful logout returns a confirmation message. Discard your token client-side after logging out.
+
+## Forgot Password
+
+If you have lost access to your account, POST your email address to `/auth/forgot-password/email` to request a password reset link:
+
+```bash
+curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/auth/forgot-password/email \
+  -H "Content-Type: application/json" \
+  -d '{"email": "your@email.com"}'
+```
+
+You will receive a password reset link at your registered email address. This endpoint always returns a generic success message regardless of whether the email exists, to prevent account enumeration.
+
+<Note>
+  Password reset is only available to roles that authenticate with an email address — wholesale buyers and administrators. Cooperative agents and farmers should contact their platform administrator to reset credentials.
+</Note>
+
+## Common Errors
+
+| Status Code | Meaning | What to do |
+|-------------|---------|------------|
+| `401 Unauthorized` | Token is missing, expired, or invalid | Re-authenticate to obtain a new token and retry your request. |
+| `403 Forbidden` | Your role does not have permission for this endpoint | Confirm you are using the correct token for the role required by this endpoint. |
+| `422 Unprocessable Entity` | Missing or malformed request fields | Check the `detail` array in the response for field-level validation errors and fix your request body. |

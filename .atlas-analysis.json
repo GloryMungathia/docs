@@ -1,0 +1,117 @@
+{
+  "projectType": "saas",
+  "projectName": "Pamodzi",
+  "projectDescription": "Pamodzi is an agricultural ecosystem platform that connects farmers, cooperatives, and wholesale buyers in Zambia — enabling produce pooling, demand campaigns, field verification, and automated payments.",
+  "theme": "almond",
+  "primaryColor": "#2fa4e7",
+  "lightColor": "#040404",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Platform Guide",
+        "groups": [
+          {
+            "group": "Introduction",
+            "pages": [
+              "introduction",
+              "how-it-works",
+              "user-roles"
+            ]
+          },
+          {
+            "group": "Getting Started",
+            "pages": [
+              "getting-started/farmers",
+              "getting-started/buyers",
+              "getting-started/agents"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/demand-campaigns",
+              "features/produce-listing",
+              "features/produce-pooling",
+              "features/market-prices",
+              "features/payments"
+            ]
+          },
+          {
+            "group": "Mobile App",
+            "pages": [
+              "mobile/overview",
+              "mobile/buyer-experience",
+              "mobile/agent-experience"
+            ]
+          },
+          {
+            "group": "Admin Dashboard",
+            "pages": [
+              "admin/overview",
+              "admin/user-management",
+              "admin/cooperative-management"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/overview",
+              "api/authentication"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/auth",
+              "api/farmers",
+              "api/campaigns",
+              "api/produce",
+              "api/payments",
+              "api/market-prices"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "USSD produce listing for farmers on feature phones via Africa's Talking",
+    "Funded demand campaigns — buyers specify crop, grade, quantity, and province upfront",
+    "Automated produce pooling that aggregates farmer listings against buyer campaigns",
+    "Cooperative field agent verification of produce quality and hub location",
+    "Flutterwave-powered payment processing with automated payout disbursement",
+    "SMS notifications for listing confirmations, campaign updates, and drop-off reminders",
+    "Market price reference data by crop type and province",
+    "Role-based access control with MFA for admins and buyers",
+    "Mobile app for buyers (campaign management) and agents (field operations)",
+    "Admin PWA dashboard for platform oversight"
+  ],
+  "publicApiSurface": [
+    "POST /auth/login/admin/form",
+    "POST /auth/login/buyer",
+    "POST /auth/login/farmer",
+    "POST /auth/login/agent",
+    "POST /auth/verify-2fa",
+    "POST /auth/forgot-password/email",
+    "POST /auth/logout",
+    "POST /auth/admin/onboard",
+    "GET /farmers/",
+    "GET /farmers/{farmer_id}",
+    "POST /farmers/onboard",
+    "PUT /farmers/{farmer_id}/verification",
+    "DELETE /farmers/{farmer_id}",
+    "POST /farmers/me/change-pin",
+    "GET /users",
+    "GET /users/{user_id}",
+    "POST /users",
+    "POST /users/{user_id}/edit",
+    "POST /users/{user_id}/archive",
+    "GET /market-prices/current"
+  ]
+}

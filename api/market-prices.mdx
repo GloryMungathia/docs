@@ -1,0 +1,203 @@
+---
+title: "Market Price Endpoints — Pamodzi API Reference"
+sidebarTitle: "Market Prices"
+description: "REST API reference for Pamodzi market price endpoints — retrieve current and historical commodity prices by crop type and province in Zambian Kwacha (ZMW)."
+---
+
+The market price endpoints provide current and historical commodity prices for Zambia's major crop types, broken down by province. Prices are sourced from the Humanitarian Data Exchange (HDX) and are denominated in ZMW per 50 kg bag. The platform syncs prices daily at startup and refreshes them on a 30-day schedule via a background APScheduler job.
+
+<Tip>
+  Market prices are refreshed daily. The `recorded_at` field on each price record shows when that specific price was last updated from the upstream HDX data source.
+</Tip>
+
+---
+
+## Supported Provinces
+
+The 10 Zambian provinces supported by the market price endpoints:
+
+`Central` · `Copperbelt` · `Eastern` · `Luapula` · `Lusaka` · `Muchinga` · `Northern` · `North-Western` · `Southern` · `Western`
+
+---
+
+## Supported Crop Types
+
+| Value        | HDX Commodity Name      |
+|--------------|-------------------------|
+| `maize`      | Maize (white)           |
+| `sorghum`    | Sorghum                 |
+| `groundnuts` | Groundnuts (shelled)    |
+| `millet`     | Millet (finger)         |
+
+---
+
+## GET /market-prices/current
+
+Returns today's market prices for all crop types in a specified province. This endpoint is public — no authentication is required. Use it to display price information to buyers, farmers, or cooperative staff before they commit to campaign or listing terms.
+
+**Authentication required:** None
+
+<ParamField query="province" type="string" required>
+  The Zambian province to retrieve current prices for. Must be one of the 10 supported province names (e.g. `Lusaka`, `Copperbelt`).
+</ParamField>
+
+<ResponseField name="province" type="string">
+  The province these prices apply to.
+</ResponseField>
+
+<ResponseField name="crop_type" type="string">
+  The crop type. One of `maize`, `sorghum`, `groundnuts`, `millet`.
+</ResponseField>
+
+<ResponseField name="price_per_50kg" type="number">
+  Current market price per 50 kg bag in ZMW.
+</ResponseField>
+
+<ResponseField name="currency" type="string">
+  Always `"ZMW"`.
+</ResponseField>
+
+<ResponseField name="recorded_at" type="string">
+  ISO 8601 timestamp of when this price was last recorded from the HDX data source.
+</ResponseField>
+
+**Example response:**
+
+```json
+[
+  {
+    "province": "Lusaka",
+    "crop_type": "maize",
+    "price_per_50kg": 340.00,
+    "currency": "ZMW",
+    "recorded_at": "2024-01-15T08:00:00Z"
+  },
+  {
+    "province": "Lusaka",
+    "crop_type": "sorghum",
+    "price_per_50kg": 280.00,
+    "currency": "ZMW",
+    "recorded_at": "2024-01-15T08:00:00Z"
+  },
+  {
+    "province": "Lusaka",
+    "crop_type": "groundnuts",
+    "price_per_50kg": 520.00,
+    "currency": "ZMW",
+    "recorded_at": "2024-01-15T08:00:00Z"
+  },
+  {
+    "province": "Lusaka",
+    "crop_type": "millet",
+    "price_per_50kg": 310.00,
+    "currency": "ZMW",
+    "recorded_at": "2024-01-15T08:00:00Z"
+  }
+]
+```
+
+```bash
+curl -X GET "https://pamodzi-bbe9f0671866.herokuapp.com/market-prices/current?province=Lusaka"
+```
+
+---
+
+## GET /market-prices
+
+Returns all market price records stored in the platform database. When called without query parameters, returns all records across all provinces and all dates. Use the optional `province` query parameter to filter results to a single province. Requires admin authentication for full access.
+
+**Authentication required:** Admin Bearer token (for all records); public access when filtered by province
+
+<ParamField query="province" type="string">
+  Optional. Filter results to a specific Zambian province. When supplied, returns all price records for that province across all dates.
+</ParamField>
+
+<ResponseField name="province" type="string">
+  The province these prices apply to.
+</ResponseField>
+
+<ResponseField name="crop_type" type="string">
+  Crop type. One of `maize`, `sorghum`, `groundnuts`, `millet`.
+</ResponseField>
+
+<ResponseField name="price_per_50kg" type="number">
+  Price per 50 kg bag in ZMW at the time of recording.
+</ResponseField>
+
+<ResponseField name="currency" type="string">
+  Always `"ZMW"`.
+</ResponseField>
+
+<ResponseField name="recorded_at" type="string">
+  ISO 8601 timestamp of when this price record was created.
+</ResponseField>
+
+```bash
+# All records (Admin only)
+curl -X GET https://pamodzi-bbe9f0671866.herokuapp.com/market-prices \
+  -H "Authorization: Bearer <your-admin-token>"
+
+# Filtered by province (public)
+curl -X GET "https://pamodzi-bbe9f0671866.herokuapp.com/market-prices?province=Copperbelt"
+```
+
+---
+
+## GET /market-prices/history
+
+Returns historical price records for a specific commodity and province combination. Use this to chart price trends over time for a given crop in a given region. The `commodity` parameter uses the HDX commodity name format.
+
+**Authentication required:** None
+
+<ParamField query="commodity" type="string" required>
+  The HDX commodity name to retrieve history for. Examples: `Maize (white)`, `Sorghum`, `Groundnuts (shelled)`, `Millet (finger)`.
+</ParamField>
+
+<ParamField query="province" type="string" required>
+  The Zambian province to retrieve price history for.
+</ParamField>
+
+<ResponseField name="province" type="string">
+  The province these prices apply to.
+</ResponseField>
+
+<ResponseField name="crop_type" type="string">
+  The normalised crop type derived from the HDX commodity name.
+</ResponseField>
+
+<ResponseField name="price_per_50kg" type="number">
+  Historical price per 50 kg bag in ZMW at the time of recording.
+</ResponseField>
+
+<ResponseField name="currency" type="string">
+  Always `"ZMW"`.
+</ResponseField>
+
+<ResponseField name="recorded_at" type="string">
+  ISO 8601 timestamp of when this historical price was recorded.
+</ResponseField>
+
+**Example response:**
+
+```json
+[
+  {
+    "province": "Copperbelt",
+    "crop_type": "sorghum",
+    "price_per_50kg": 265.00,
+    "currency": "ZMW",
+    "recorded_at": "2023-12-15T08:00:00Z"
+  },
+  {
+    "province": "Copperbelt",
+    "crop_type": "sorghum",
+    "price_per_50kg": 271.50,
+    "currency": "ZMW",
+    "recorded_at": "2024-01-15T08:00:00Z"
+  }
+]
+```
+
+```bash
+curl -X GET "https://pamodzi-bbe9f0671866.herokuapp.com/market-prices/history?commodity=Sorghum&province=Copperbelt"
+```

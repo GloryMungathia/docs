@@ -1,0 +1,62 @@
+---
+title: "Payments and Payouts on Pamodzi"
+sidebarTitle: "Payments"
+description: "Pamodzi handles the full payment lifecycle — from buyer funding via Flutterwave to automated payout to farmers and cooperatives after produce delivery, with a 5% platform fee."
+---
+
+Pamodzi manages the full payment lifecycle from the moment you fund a demand campaign through to payout for farmers and cooperatives after produce is collected. All transactions are processed via Flutterwave and recorded in the platform's ledger — giving you a clear, auditable trail at every step.
+
+## How Payments Work
+
+<Steps>
+  <Step title="Buyer funds the campaign">
+    When you create a demand campaign, you provide your mobile money details. Flutterwave processes the charge, and the full campaign amount is credited to the Pamodzi merchant account. Your campaign moves from pending to **aggregating** once payment is confirmed.
+  </Step>
+  <Step title="Campaign goes live">
+    Payment confirmation automatically activates your campaign. Farmer listings begin matching against it immediately — no manual action required from you.
+  </Step>
+  <Step title="Produce is verified and collected">
+    After your campaign is fulfilled, you have a **72-hour window** to collect produce from the cooperative hub. Collection confirmation triggers the payout process.
+  </Step>
+  <Step title="Payout is disbursed">
+    The platform deducts a **5% platform fee** from the total campaign amount and releases the remainder to the cooperative for distribution to the contributing farmers.
+  </Step>
+</Steps>
+
+## Payment Flow
+
+The table below shows how funds move through the platform from your payment to farmer payout.
+
+| Stage | Direction | Description |
+|---|---|---|
+| **Campaign funding** | Buyer → Flutterwave | You pay the full campaign amount via mobile money |
+| **Platform receipt** | Flutterwave → Pamodzi merchant account | Funds are held securely in the platform wallet |
+| **Fee deduction** | Pamodzi merchant account | A 5% platform fee is deducted from the total |
+| **Cooperative payout** | Pamodzi merchant account → Cooperative | The net amount is released to the cooperative for farmer distribution |
+
+## Fees
+
+Pamodzi charges a **5% platform fee** on the total campaign amount. This fee is deducted automatically at the point of payout — you do not need to calculate or submit it separately. The cooperative receives the net payout and is responsible for distributing funds to the farmers who contributed produce to the campaign.
+
+## Transaction States
+
+Every payment transaction in Pamodzi has a status you can track in the platform.
+
+| Status | What it means |
+|---|---|
+| **Processing** | The transaction has been initiated and is being handled by Flutterwave |
+| **Completed** | The transaction was successful and funds have moved as expected |
+| **Failed** | The transaction did not complete — typically due to insufficient mobile money balance |
+| **Refunded** | The campaign was cancelled before fulfillment and the buyer's payment has been returned |
+
+## Currency
+
+All transactions on Pamodzi are denominated in **Zambian Kwacha (ZMW)**. This applies to campaign funding, platform fees, cooperative payouts, and any refunds.
+
+<Note>
+  Payouts are processed after you confirm produce collection. If a campaign is cancelled before fulfillment, a refund is initiated to your original mobile money account.
+</Note>
+
+<Warning>
+  Ensure your mobile money account has sufficient balance before creating a campaign. A failed payment will cancel the campaign, and you will need to create a new one.
+</Warning>

@@ -1,0 +1,259 @@
+---
+title: "Farmers Endpoints — Pamodzi API Reference"
+sidebarTitle: "Farmers"
+description: "REST API reference for Pamodzi farmer endpoints — onboard, list, retrieve, update verification status, archive, and PIN management for farmer accounts."
+---
+
+The farmers endpoints let administrators and cooperative agents manage farmer accounts on the platform — from onboarding through produce verification status updates. Farmers themselves authenticate via USSD using a 4-digit PIN rather than a password, so account management operations are performed on their behalf by agents or admins through this API.
+
+<Note>
+  All farmer management endpoints (onboarding, listing, retrieval, verification, and archiving) require an **Admin or Cooperative Agent** Bearer token. Only the PIN change endpoint is restricted to the farmer themselves.
+</Note>
+
+---
+
+## POST /farmers/onboard
+
+Registers a new farmer on the platform and associates them with a cooperative. The farmer is immediately able to list produce via USSD after onboarding. The endpoint creates both a base `user` record and a linked `farmer` record in a single transaction.
+
+**Authentication required:** Admin or Agent Bearer token
+
+<ParamField body="user" type="object" required>
+  The base user fields for the farmer account.
+
+  <Expandable title="user fields">
+    <ParamField body="first_name" type="string" required>
+      Farmer's given name. 1–100 characters.
+    </ParamField>
+    <ParamField body="last_name" type="string" required>
+      Farmer's family name. 1–100 characters.
+    </ParamField>
+    <ParamField body="phone_number" type="string" required>
+      Farmer's mobile number. This is their primary credential for USSD authentication.
+    </ParamField>
+    <ParamField body="nrc_number" type="string" required>
+      Zambian National Registration Card number. Required on all user records. Max 20 characters.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="farmer" type="object" required>
+  The farmer-specific fields.
+
+  <Expandable title="farmer fields">
+    <ParamField body="cooperative_id" type="string" required>
+      UUID of the cooperative this farmer belongs to.
+    </ParamField>
+    <ParamField body="pin" type="string" required>
+      The farmer's initial 4-digit numerical PIN. Stored as an Argon2id hash immediately on receipt.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="farmer_id" type="string">
+  UUID of the newly created farmer record.
+</ResponseField>
+
+<ResponseField name="user_id" type="string">
+  UUID of the associated base user record.
+</ResponseField>
+
+<ResponseField name="cooperative_id" type="string">
+  UUID of the cooperative the farmer is registered under.
+</ResponseField>
+
+<ResponseField name="is_verified" type="boolean">
+  Verification status. Defaults to `false` on creation.
+</ResponseField>
+
+<ResponseField name="is_active" type="boolean">
+  Account active status. Defaults to `true` on creation.
+</ResponseField>
+
+```bash
+curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/farmers/onboard \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your-admin-or-agent-token>" \
+  -d '{
+    "user": {
+      "first_name": "Bwalya",
+      "last_name": "Tembo",
+      "phone_number": "+260977000100",
+      "nrc_number": "234567/89/1"
+    },
+    "farmer": {
+      "cooperative_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "pin": "5678"
+    }
+  }'
+```
+
+---
+
+## GET /farmers/
+
+Returns a list of all active (non-archived) farmer records on the platform. Each record includes the farmer's profile and cooperative association.
+
+**Authentication required:** Admin or Agent Bearer token
+
+<ResponseField name="farmer_id" type="string">
+  UUID of the farmer record.
+</ResponseField>
+
+<ResponseField name="user_id" type="string">
+  UUID of the linked base user record.
+</ResponseField>
+
+<ResponseField name="cooperative_id" type="string">
+  UUID of the cooperative the farmer belongs to.
+</ResponseField>
+
+<ResponseField name="is_verified" type="boolean">
+  Whether the farmer has been verified by an agent or admin.
+</ResponseField>
+
+<ResponseField name="is_active" type="boolean">
+  `true` for active accounts; `false` for archived records. This endpoint returns active farmers only.
+</ResponseField>
+
+```bash
+curl -X GET https://pamodzi-bbe9f0671866.herokuapp.com/farmers/ \
+  -H "Authorization: Bearer <your-admin-or-agent-token>"
+```
+
+---
+
+## GET /farmers/{farmer_id}
+
+Returns the full profile for a single farmer record, identified by their UUID.
+
+**Authentication required:** Admin or Agent Bearer token
+
+<ParamField path="farmer_id" type="string" required>
+  UUID of the farmer to retrieve.
+</ParamField>
+
+<ResponseField name="farmer_id" type="string">
+  UUID of the farmer record.
+</ResponseField>
+
+<ResponseField name="user_id" type="string">
+  UUID of the linked base user record.
+</ResponseField>
+
+<ResponseField name="cooperative_id" type="string">
+  UUID of the cooperative the farmer belongs to.
+</ResponseField>
+
+<ResponseField name="is_verified" type="boolean">
+  Whether the farmer has been verified.
+</ResponseField>
+
+<ResponseField name="is_active" type="boolean">
+  Account active status.
+</ResponseField>
+
+```bash
+curl -X GET https://pamodzi-bbe9f0671866.herokuapp.com/farmers/a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
+  -H "Authorization: Bearer <your-admin-or-agent-token>"
+```
+
+---
+
+## PUT /farmers/{farmer_id}/verification
+
+Updates the verification status of a farmer account. Verifying a farmer confirms their identity and eligibility to have produce listings accepted into campaign pools. Unverifying reverses this status.
+
+**Authentication required:** Admin or Agent Bearer token
+
+<ParamField path="farmer_id" type="string" required>
+  UUID of the farmer whose verification status you want to update.
+</ParamField>
+
+<ParamField body="is_verified" type="boolean" required>
+  Set to `true` to mark the farmer as verified, or `false` to unverify them.
+</ParamField>
+
+<ResponseField name="farmer_id" type="string">
+  UUID of the updated farmer record.
+</ResponseField>
+
+<ResponseField name="is_verified" type="boolean">
+  The updated verification status.
+</ResponseField>
+
+<ResponseField name="user_id" type="string">
+  UUID of the linked base user record.
+</ResponseField>
+
+<ResponseField name="cooperative_id" type="string">
+  UUID of the cooperative the farmer belongs to.
+</ResponseField>
+
+```bash
+curl -X PUT https://pamodzi-bbe9f0671866.herokuapp.com/farmers/a1b2c3d4-e5f6-7890-abcd-ef1234567890/verification \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your-admin-or-agent-token>" \
+  -d '{
+    "is_verified": true
+  }'
+```
+
+---
+
+## DELETE /farmers/{farmer_id}
+
+Archives (soft-deletes) a farmer account. The record is retained in the database with `is_active` set to `false` but the farmer can no longer log in or submit produce listings. This action is reversible only through direct database intervention.
+
+**Authentication required:** Admin or Agent Bearer token
+
+<ParamField path="farmer_id" type="string" required>
+  UUID of the farmer account to archive.
+</ParamField>
+
+<ResponseField name="message" type="string">
+  A confirmation message, e.g. `"Farmer archived successfully."`.
+</ResponseField>
+
+<ResponseField name="farmer_id" type="string">
+  UUID of the archived farmer record.
+</ResponseField>
+
+<Warning>
+  Archiving a farmer account is a destructive operation from the farmer's perspective — they will immediately lose access to the platform. Confirm the intent with your business logic before calling this endpoint.
+</Warning>
+
+```bash
+curl -X DELETE https://pamodzi-bbe9f0671866.herokuapp.com/farmers/a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
+  -H "Authorization: Bearer <your-admin-or-agent-token>"
+```
+
+---
+
+## POST /farmers/me/change-pin
+
+Allows the authenticated farmer to rotate their own 4-digit security PIN. The farmer must supply their current PIN to authorise the change. This endpoint is for farmer self-service only — agents and admins cannot use it to change another farmer's PIN.
+
+**Authentication required:** Farmer Bearer token (self only)
+
+<ParamField body="current_pin" type="string" required>
+  The farmer's existing 4-digit PIN. Used to verify intent before the change is applied.
+</ParamField>
+
+<ParamField body="new_pin" type="string" required>
+  The new 4-digit numerical PIN. Must differ from the current PIN.
+</ParamField>
+
+<ResponseField name="message" type="string">
+  A confirmation message, e.g. `"PIN updated successfully."`.
+</ResponseField>
+
+```bash
+curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/farmers/me/change-pin \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your-farmer-token>" \
+  -d '{
+    "current_pin": "1234",
+    "new_pin": "5678"
+  }'
+```

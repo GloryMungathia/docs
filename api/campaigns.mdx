@@ -1,0 +1,324 @@
+---
+title: "Demand Campaign Endpoints — Pamodzi API Reference"
+sidebarTitle: "Campaigns"
+description: "REST API reference for Pamodzi demand campaign endpoints — create, list, retrieve, and monitor wholesale buyer campaigns for produce aggregation."
+---
+
+Demand campaign endpoints let wholesale buyers create and monitor funded produce requests, and let agents and admins view campaign activity. A demand campaign is the starting point of the entire Pamodzi produce flow: a buyer specifies the crop type, required grade, target quantity, and province, pays up-front via Flutterwave, and the platform begins aggregating matching farmer listings into a produce pool.
+
+<Note>
+  For the complete, authoritative campaign endpoint list — including payment confirmation, campaign extension, fulfillment, and the daily scheduler trigger — refer to the interactive Swagger docs at [https://pamodzi-bbe9f0671866.herokuapp.com/docs](https://pamodzi-bbe9f0671866.herokuapp.com/docs).
+</Note>
+
+---
+
+## Campaign Status Values
+
+A demand campaign moves through these status values during its lifecycle:
+
+| Status        | Description                                                                                   |
+|---------------|-----------------------------------------------------------------------------------------------|
+| `aggregating` | The campaign is active and the platform is collecting matching farmer listings into the pool.  |
+| `fulfilled`   | The required quantity has been verified, the buyer has collected, and payout has been released.|
+| `cancelled`   | The campaign was cancelled before fulfilment by the buyer or an admin.                        |
+| `archived`    | The campaign has been closed and archived for record-keeping.                                 |
+
+---
+
+## Crop Type and Grade Enums
+
+<Tabs>
+  <Tab title="Crop Types">
+    | Value        | Description       |
+    |--------------|-------------------|
+    | `maize`      | White maize       |
+    | `sorghum`    | Sorghum grain     |
+    | `groundnuts` | Groundnut kernels |
+    | `millet`     | Finger millet     |
+  </Tab>
+  <Tab title="Grades">
+    | Value | Description                                                        |
+    |-------|--------------------------------------------------------------------|
+    | `A`   | Premium grade — lowest moisture, highest quality specifications.   |
+    | `B`   | Standard grade — moderate moisture tolerance.                      |
+    | `C`   | Economy grade — highest moisture tolerance, lowest price tier.     |
+  </Tab>
+</Tabs>
+
+---
+
+## POST /demand-campaigns/
+
+Creates a new demand campaign. The campaign must be funded via the Flutterwave payment flow before it enters `aggregating` status and the platform begins matching farmer listings. You can confirm payment by calling `POST /demand-campaigns/{campaign_id}/confirm-payment` after the Flutterwave redirect.
+
+**Authentication required:** Buyer Bearer token
+
+<ParamField body="crop_type" type="string" required>
+  The crop type the buyer is requesting. One of `maize`, `sorghum`, `groundnuts`, `millet`.
+</ParamField>
+
+<ParamField body="grade" type="string" required>
+  Required produce grade. One of `A`, `B`, `C`.
+</ParamField>
+
+<ParamField body="quantity_kg" type="number" required>
+  Target quantity in kilograms. The platform will aggregate farmer listings up to this amount.
+</ParamField>
+
+<ParamField body="province" type="string" required>
+  Target Zambian province for produce collection. Must match one of the 10 supported provinces.
+</ParamField>
+
+<ParamField body="moisture_content" type="number" required>
+  Maximum acceptable moisture content as a percentage (e.g. `13.5`). Listings above this threshold will be rejected at verification.
+</ParamField>
+
+<ParamField body="start_date" type="string" required>
+  Campaign start date in ISO 8601 format (`YYYY-MM-DD`).
+</ParamField>
+
+<ParamField body="end_date" type="string" required>
+  Campaign end date in ISO 8601 format (`YYYY-MM-DD`). The platform runs a daily check at 08:00 to expire campaigns past this date.
+</ParamField>
+
+<ParamField body="amount" type="number" required>
+  Total payment amount in ZMW. This is the gross amount charged to the buyer, from which the platform retains a 5% fee before releasing the net payout to the cooperative.
+</ParamField>
+
+<ParamField body="target_cooperative_id" type="string" required>
+  UUID of the cooperative the buyer wants to source produce from.
+</ParamField>
+
+<ResponseField name="campaign_id" type="string">
+  UUID of the newly created campaign.
+</ResponseField>
+
+<ResponseField name="buyer_id" type="string">
+  UUID of the buyer who created the campaign.
+</ResponseField>
+
+<ResponseField name="crop_type" type="string">
+  The requested crop type.
+</ResponseField>
+
+<ResponseField name="grade" type="string">
+  The required produce grade.
+</ResponseField>
+
+<ResponseField name="quantity_kg" type="number">
+  Target quantity in kilograms.
+</ResponseField>
+
+<ResponseField name="province" type="string">
+  Target province for produce collection.
+</ResponseField>
+
+<ResponseField name="campaign_status" type="string">
+  Initial status. Set to `aggregating` once payment is confirmed.
+</ResponseField>
+
+<ResponseField name="target_cooperative_id" type="string">
+  UUID of the target cooperative.
+</ResponseField>
+
+<ResponseField name="amount" type="number">
+  Gross campaign payment amount in ZMW.
+</ResponseField>
+
+<ResponseField name="start_date" type="string">
+  Campaign start date (ISO 8601).
+</ResponseField>
+
+<ResponseField name="end_date" type="string">
+  Campaign end date (ISO 8601).
+</ResponseField>
+
+```bash
+curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/demand-campaigns/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your-buyer-token>" \
+  -d '{
+    "crop_type": "maize",
+    "grade": "A",
+    "quantity_kg": 5000,
+    "province": "Lusaka",
+    "moisture_content": 13.5,
+    "start_date": "2024-02-01",
+    "end_date": "2024-02-28",
+    "amount": 34000.00,
+    "target_cooperative_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+  }'
+```
+
+---
+
+## GET /demand-campaigns/
+
+Returns a list of demand campaigns. Buyers see only their own campaigns. Admins see all campaigns across the platform.
+
+**Authentication required:** Buyer or Admin Bearer token
+
+<ResponseField name="campaign_id" type="string">
+  UUID of the campaign.
+</ResponseField>
+
+<ResponseField name="crop_type" type="string">
+  Crop type for this campaign.
+</ResponseField>
+
+<ResponseField name="campaign_status" type="string">
+  Current campaign status. One of `aggregating`, `fulfilled`, `cancelled`, `archived`.
+</ResponseField>
+
+<ResponseField name="target_cooperative_id" type="string">
+  UUID of the target cooperative.
+</ResponseField>
+
+<ResponseField name="province" type="string">
+  Target province.
+</ResponseField>
+
+<ResponseField name="quantity_kg" type="number">
+  Target quantity in kilograms.
+</ResponseField>
+
+<ResponseField name="buyer_id" type="string">
+  UUID of the buyer who owns the campaign.
+</ResponseField>
+
+```bash
+curl -X GET https://pamodzi-bbe9f0671866.herokuapp.com/demand-campaigns/ \
+  -H "Authorization: Bearer <your-buyer-or-admin-token>"
+```
+
+---
+
+## GET /demand-campaigns/{campaign_id}
+
+Returns the full details for a single campaign, including its current status, payment information, and produce pool progress.
+
+**Authentication required:** Buyer, Admin, or Agent Bearer token
+
+<ParamField path="campaign_id" type="string" required>
+  UUID of the campaign to retrieve.
+</ParamField>
+
+<ResponseField name="campaign_id" type="string">
+  UUID of the campaign.
+</ResponseField>
+
+<ResponseField name="buyer_id" type="string">
+  UUID of the campaign owner.
+</ResponseField>
+
+<ResponseField name="crop_type" type="string">
+  The requested crop type.
+</ResponseField>
+
+<ResponseField name="grade" type="string">
+  Required produce grade.
+</ResponseField>
+
+<ResponseField name="quantity_kg" type="number">
+  Target quantity in kilograms.
+</ResponseField>
+
+<ResponseField name="campaign_status" type="string">
+  Current status. One of `aggregating`, `fulfilled`, `cancelled`, `archived`.
+</ResponseField>
+
+<ResponseField name="province" type="string">
+  Target province.
+</ResponseField>
+
+<ResponseField name="moisture_content" type="number">
+  Maximum acceptable moisture content percentage.
+</ResponseField>
+
+<ResponseField name="amount" type="number">
+  Gross payment amount in ZMW.
+</ResponseField>
+
+<ResponseField name="start_date" type="string">
+  Campaign start date.
+</ResponseField>
+
+<ResponseField name="end_date" type="string">
+  Campaign end date.
+</ResponseField>
+
+<ResponseField name="target_cooperative_id" type="string">
+  UUID of the target cooperative.
+</ResponseField>
+
+```bash
+curl -X GET https://pamodzi-bbe9f0671866.herokuapp.com/demand-campaigns/a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
+  -H "Authorization: Bearer <your-token>"
+```
+
+---
+
+## PUT /demand-campaigns/{campaign_id}
+
+Updates mutable fields on an existing campaign. You can use this to adjust dates, quantity, or other campaign parameters before the campaign is fulfilled or cancelled. Returns the updated campaign record.
+
+**Authentication required:** Buyer or Admin Bearer token
+
+<ParamField path="campaign_id" type="string" required>
+  UUID of the campaign to update.
+</ParamField>
+
+<ParamField body="end_date" type="string">
+  New campaign end date in ISO 8601 format.
+</ParamField>
+
+<ParamField body="quantity_kg" type="number">
+  Updated target quantity in kilograms.
+</ParamField>
+
+<ParamField body="moisture_content" type="number">
+  Updated maximum acceptable moisture content percentage.
+</ParamField>
+
+<ResponseField name="campaign_id" type="string">
+  UUID of the updated campaign.
+</ResponseField>
+
+<ResponseField name="campaign_status" type="string">
+  Current campaign status after update.
+</ResponseField>
+
+```bash
+curl -X PUT https://pamodzi-bbe9f0671866.herokuapp.com/demand-campaigns/a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your-buyer-or-admin-token>" \
+  -d '{
+    "end_date": "2024-03-15",
+    "quantity_kg": 6000
+  }'
+```
+
+---
+
+## POST /produce-pools/cancel-campaign/{campaign_id}
+
+Cancels an active campaign and stops further produce aggregation. Any produce listings already allocated to the pool are released. A refund may be initiated depending on the campaign's payment status.
+
+**Authentication required:** Buyer or Admin Bearer token
+
+<ParamField path="campaign_id" type="string" required>
+  UUID of the campaign to cancel.
+</ParamField>
+
+<ResponseField name="message" type="string">
+  A confirmation message indicating the campaign has been cancelled.
+</ResponseField>
+
+<Warning>
+  Cancelling a campaign cannot be undone via the API. Ensure you have coordinated with the cooperative before cancelling a campaign that has partially aggregated produce, as this will release pooled farmer listings.
+</Warning>
+
+```bash
+curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/produce-pools/cancel-campaign/a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
+  -H "Authorization: Bearer <your-buyer-or-admin-token>"
+```

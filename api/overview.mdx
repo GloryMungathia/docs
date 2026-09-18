@@ -1,0 +1,93 @@
+---
+title: "Pamodzi REST API Reference and Base URL"
+sidebarTitle: "Overview"
+description: "The Pamodzi API is a REST API built with FastAPI. Base URL, response formats, error codes, and rate limits — everything you need to start integrating."
+---
+
+The Pamodzi API is a RESTful API built on FastAPI. Every client in the Pamodzi ecosystem — the farmer-facing USSD interface, the cooperative agent mobile app, and the admin dashboard — communicates exclusively through this API. As an external developer, this is the single integration surface you need.
+
+## Base URL
+
+All API requests target the following base URL:
+
+```
+https://pamodzi-bbe9f0671866.herokuapp.com
+```
+
+The interactive Swagger/OpenAPI documentation is available at `https://pamodzi-bbe9f0671866.herokuapp.com/docs`. You can explore every endpoint, inspect request and response schemas, and run live requests directly from your browser.
+
+## Request Format
+
+All requests must send and receive JSON. Include the following header on every request:
+
+```bash
+Content-Type: application/json
+```
+
+Authenticated requests must also include a Bearer token in the `Authorization` header:
+
+```bash
+Authorization: Bearer <your-access-token>
+```
+
+See the [Authentication](/api/authentication) page for details on how to obtain a token for your role.
+
+## Response Format
+
+All responses are JSON. A successful response returns the relevant data object for the endpoint you called. Error responses follow a consistent structure with a `detail` field describing what went wrong:
+
+```json
+{
+  "detail": "Not authenticated"
+}
+```
+
+For validation errors (status `422`), FastAPI returns a structured array of field-level issues:
+
+```json
+{
+  "detail": [
+    {
+      "loc": ["body", "email"],
+      "msg": "field required",
+      "type": "value_error.missing"
+    }
+  ]
+}
+```
+
+## HTTP Status Codes
+
+The API uses standard HTTP status codes. Use these to drive your error-handling logic:
+
+| Code | Meaning | What it means for you |
+|------|---------|-----------------------|
+| `200 OK` | Request succeeded | The response body contains the requested data. |
+| `201 Created` | Resource was created | A new resource was successfully created. |
+| `400 Bad Request` | Invalid input or missing required fields | Check your request body against the schema. |
+| `401 Unauthorized` | Missing or invalid authentication token | Authenticate and include a valid Bearer token. |
+| `403 Forbidden` | Authenticated but lacking permission | Your role does not have access to this endpoint. |
+| `404 Not Found` | The requested resource does not exist | Verify the resource ID or path. |
+| `422 Unprocessable Entity` | Validation error | A required field is missing or the wrong type — check the `detail` array. |
+| `429 Too Many Requests` | Rate limit exceeded | Back off and retry after a short delay. |
+| `500 Internal Server Error` | Server-side error | Something went wrong on our end — try again or contact support. |
+
+## Authentication Overview
+
+Most endpoints require a valid JWT Bearer token. You obtain a token by authenticating against the login endpoint for your role. Admins and wholesale buyers go through an additional two-factor authentication (2FA) step before receiving a usable token. Cooperative agents and farmers receive a token directly on successful login.
+
+See the [Authentication](/api/authentication) page for the full login flow, token usage, and logout instructions.
+
+## Rate Limiting
+
+The API enforces per-endpoint rate limits to ensure fair usage across all integrations. If your request returns a `429 Too Many Requests` response, pause your requests and retry after a short delay. Avoid aggressive retry loops — use exponential backoff where possible.
+
+<Tip>
+  Use the interactive Swagger UI at [https://pamodzi-bbe9f0671866.herokuapp.com/docs](https://pamodzi-bbe9f0671866.herokuapp.com/docs) to explore all endpoints, try live requests directly in your browser, and view full request and response schemas without writing a single line of code.
+</Tip>
+
+## Interactive API Docs
+
+<Card title="Pamodzi Swagger UI" icon="book" href="https://pamodzi-bbe9f0671866.herokuapp.com/docs">
+  Explore every Pamodzi endpoint interactively. Inspect schemas, send test requests, and view live responses — all from your browser.
+</Card>

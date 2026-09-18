@@ -1,0 +1,54 @@
+---
+title: "How Pamodzi Works: From Campaign to Payout"
+sidebarTitle: "How It Works"
+description: "Step-by-step walkthrough of the Pamodzi produce aggregation flow — from a buyer funding a demand campaign through farmer listings, agent verification, and final payment disbursement."
+---
+
+Every trade on Pamodzi follows a five-step cycle that takes a wholesale buyer's specific request all the way through to verified produce and confirmed payment for farmers. The platform handles aggregation, verification, and disbursement automatically — so buyers get the volume they need, farmers get paid fairly, and cooperative agents have clear tasks at every stage.
+
+## The Five-Step Flow
+
+<Steps>
+  <Step title="Buyer Creates a Funded Demand Campaign">
+    A wholesale buyer opens the Pamodzi app and creates a demand campaign. They specify the crop type, quality grade, target quantity (in kilograms), the province they want to source from, and the maximum acceptable moisture content. The buyer then funds the campaign upfront through Flutterwave before it goes live. Funding the campaign in advance guarantees farmers that a real, committed buyer is waiting for their produce.
+  </Step>
+  <Step title="Farmers List Produce via USSD">
+    Once a campaign is live, farmers in the matching province can list their produce. Each farmer dials a USSD short code on any basic mobile phone — no smartphone or internet connection needed. The USSD menu guides the farmer through entering the crop type and the quantity they have available. After submitting, the farmer receives an SMS confirmation with their listing details. A cooperative agent can also enter a listing on a farmer's behalf if the farmer needs assistance.
+  </Step>
+  <Step title="Platform Aggregates Matching Listings">
+    Pamodzi automatically compares each new listing against active demand campaigns. When a listing matches a campaign's crop, grade, province, and moisture requirements, it is added to that campaign's produce pool. The pool grows as more farmers submit matching listings until the buyer's target quantity is reached.
+  </Step>
+  <Step title="Cooperative Agent Verifies Produce">
+    Before any listing is locked into a campaign, a cooperative agent visits the farmer and physically inspects the produce. The agent confirms the quality and records the cooperative hub location using the Pamodzi mobile app. The agent then marks each listing as either approved or rejected. Only approved listings remain in the produce pool. Rejected listings are removed from the campaign, and the farmer is notified by SMS.
+  </Step>
+  <Step title="Buyer Collects Produce and Payment Is Disbursed">
+    Once the produce pool meets the campaign's target quantity, the buyer receives a notification that the campaign is fulfilled. The buyer arranges pickup at the cooperative hub. After collection is confirmed, Pamodzi disburses payment from the merchant account to each farmer who contributed an approved listing. A 5% platform fee is retained from the total transaction value. Farmers receive an SMS confirming their payout amount.
+  </Step>
+</Steps>
+
+<Tip>
+  Farmers never need a smartphone to participate. The USSD interface works on any basic mobile phone that can make calls or access a mobile money menu — which covers the vast majority of handsets in rural Zambia.
+</Tip>
+
+## Campaign States
+
+A demand campaign moves through the following states from creation to completion.
+
+| State | What It Means |
+|---|---|
+| Aggregating | The campaign is live and actively collecting matching farmer listings into the produce pool |
+| Fulfilled | The produce pool has reached the buyer's target quantity and the buyer has been notified for pickup |
+| Cancelled | The campaign was ended before fulfilment — for example, by the buyer or by an administrator — and no further listings are accepted |
+| Archived | The campaign has been closed and stored for record-keeping, either after a successful payout or after cancellation |
+
+## Produce Listing States
+
+Each individual farmer listing also has its own status that changes as the campaign progresses.
+
+| State | What It Means |
+|---|---|
+| Not Aggregated | The listing has been submitted but not yet matched to a demand campaign |
+| Aggregated | The listing has been matched to a campaign and is part of the produce pool, pending agent verification |
+| Approved | The cooperative agent has inspected the produce and confirmed it meets the campaign's quality requirements |
+| Rejected | The cooperative agent has inspected the produce and determined it does not meet the required grade or moisture content |
+| Archived | The listing has been closed and stored for record-keeping after the campaign concludes |
