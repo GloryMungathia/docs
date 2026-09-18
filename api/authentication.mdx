@@ -1,7 +1,7 @@
 ---
-title: "Authenticate API Requests to Pamodzi"
+title: "Pamodzi API Authentication — Login, 2FA, and Tokens"
 sidebarTitle: "Authentication"
-description: "Pamodzi uses JWT Bearer tokens for API authentication. Learn how to obtain a token for your role — buyer, agent, or admin — and how to use it in your requests."
+description: "Learn how to authenticate with the Pamodzi API. Obtain a JWT Bearer token for your role — buyer, agent, farmer, or admin — and make authenticated requests."
 ---
 
 Pamodzi uses JWT (JSON Web Token) Bearer tokens for API authentication. Each user role has its own login endpoint, and some roles require two-factor authentication (2FA) before receiving a usable token. Once you have a token, include it as a Bearer token in the `Authorization` header of every protected request.

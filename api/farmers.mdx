@@ -1,20 +1,20 @@
 ---
-title: "Farmers Endpoints — Pamodzi API Reference"
+title: "Farmer & User Management Endpoints — Pamodzi API Guide"
 sidebarTitle: "Farmers"
-description: "REST API reference for Pamodzi farmer endpoints — onboard, list, retrieve, update verification status, archive, and PIN management for farmer accounts."
+description: "REST API reference for Pamodzi farmer and user management — onboard, list, verify, archive farmers, change PINs, and manage platform user accounts."
 ---
 
-The farmers endpoints let administrators and cooperative agents manage farmer accounts on the platform — from onboarding through produce verification status updates. Farmers themselves authenticate via USSD using a 4-digit PIN rather than a password, so account management operations are performed on their behalf by agents or admins through this API.
+The farmer endpoints let administrators and cooperative agents manage farmer accounts — from onboarding through verification status updates. Because farmers interact with the platform via USSD using a 4-digit PIN, account management is performed on their behalf by agents or admins through this API. The user management section at the bottom of this page covers admin-only operations on all platform user records.
 
 <Note>
-  All farmer management endpoints (onboarding, listing, retrieval, verification, and archiving) require an **Admin or Cooperative Agent** Bearer token. Only the PIN change endpoint is restricted to the farmer themselves.
+  All farmer management endpoints require an **Admin or Cooperative Agent** Bearer token. The PIN change endpoint is restricted to the authenticated farmer only. The user management endpoints require an **Admin** Bearer token unless otherwise noted.
 </Note>
 
 ---
 
 ## POST /farmers/onboard
 
-Registers a new farmer on the platform and associates them with a cooperative. The farmer is immediately able to list produce via USSD after onboarding. The endpoint creates both a base `user` record and a linked `farmer` record in a single transaction.
+Registers a new farmer on the platform and associates them with a cooperative. The farmer can list produce via USSD immediately after onboarding. The endpoint creates both a base user record and a linked farmer record in a single transaction.
 
 **Authentication required:** Admin or Agent Bearer token
 
@@ -45,7 +45,7 @@ Registers a new farmer on the platform and associates them with a cooperative. T
       UUID of the cooperative this farmer belongs to.
     </ParamField>
     <ParamField body="pin" type="string" required>
-      The farmer's initial 4-digit numerical PIN. Stored as an Argon2id hash immediately on receipt.
+      The farmer's initial 4-digit numerical PIN.
     </ParamField>
   </Expandable>
 </ParamField>
@@ -113,7 +113,7 @@ Returns a list of all active (non-archived) farmer records on the platform. Each
 </ResponseField>
 
 <ResponseField name="is_active" type="boolean">
-  `true` for active accounts; `false` for archived records. This endpoint returns active farmers only.
+  `true` for active accounts. This endpoint returns active farmers only.
 </ResponseField>
 
 ```bash
@@ -162,7 +162,7 @@ curl -X GET https://pamodzi-bbe9f0671866.herokuapp.com/farmers/a1b2c3d4-e5f6-789
 
 ## PUT /farmers/{farmer_id}/verification
 
-Updates the verification status of a farmer account. Verifying a farmer confirms their identity and eligibility to have produce listings accepted into campaign pools. Unverifying reverses this status.
+Updates the verification status of a farmer account. Verifying a farmer confirms their identity and eligibility to have produce listings accepted into campaign pools.
 
 **Authentication required:** Admin or Agent Bearer token
 
@@ -203,7 +203,7 @@ curl -X PUT https://pamodzi-bbe9f0671866.herokuapp.com/farmers/a1b2c3d4-e5f6-789
 
 ## DELETE /farmers/{farmer_id}
 
-Archives (soft-deletes) a farmer account. The record is retained in the database with `is_active` set to `false` but the farmer can no longer log in or submit produce listings. This action is reversible only through direct database intervention.
+Archives (soft-deletes) a farmer account. The record is retained but the farmer can no longer log in or submit produce listings.
 
 **Authentication required:** Admin or Agent Bearer token
 
@@ -220,7 +220,7 @@ Archives (soft-deletes) a farmer account. The record is retained in the database
 </ResponseField>
 
 <Warning>
-  Archiving a farmer account is a destructive operation from the farmer's perspective — they will immediately lose access to the platform. Confirm the intent with your business logic before calling this endpoint.
+  Archiving a farmer account takes effect immediately — the farmer loses access to the platform. Confirm the intent before calling this endpoint.
 </Warning>
 
 ```bash
@@ -232,7 +232,7 @@ curl -X DELETE https://pamodzi-bbe9f0671866.herokuapp.com/farmers/a1b2c3d4-e5f6-
 
 ## POST /farmers/me/change-pin
 
-Allows the authenticated farmer to rotate their own 4-digit security PIN. The farmer must supply their current PIN to authorise the change. This endpoint is for farmer self-service only — agents and admins cannot use it to change another farmer's PIN.
+Allows the authenticated farmer to rotate their own 4-digit security PIN. The farmer must supply their current PIN to authorise the change. Agents and admins cannot use this endpoint to change another farmer's PIN.
 
 **Authentication required:** Farmer Bearer token (self only)
 
@@ -256,4 +256,258 @@ curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/farmers/me/change-pin \
     "current_pin": "1234",
     "new_pin": "5678"
   }'
+```
+
+---
+
+## User Management Endpoints
+
+The following endpoints provide admin-level management of all user accounts on the platform — across all roles (admin, agent, buyer, farmer). Use these to list, inspect, create, edit, and archive platform users.
+
+---
+
+## GET /users
+
+Returns a list of all user accounts on the platform, across all roles. Each record reflects the base user identity.
+
+**Authentication required:** Admin Bearer token
+
+<ResponseField name="user_id" type="string">
+  UUID of the user record.
+</ResponseField>
+
+<ResponseField name="first_name" type="string">
+  User's given name.
+</ResponseField>
+
+<ResponseField name="last_name" type="string">
+  User's family name.
+</ResponseField>
+
+<ResponseField name="phone_number" type="string">
+  User's registered phone number.
+</ResponseField>
+
+<ResponseField name="nrc_number" type="string">
+  User's Zambian National Registration Card number.
+</ResponseField>
+
+<ResponseField name="role" type="string">
+  The user's role. One of `admin`, `cooperative_agent`, `wholesale_buyer`, `farmer`.
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  Email address. Present for admins and wholesale buyers; `null` for agents and farmers.
+</ResponseField>
+
+<ResponseField name="is_archived" type="boolean">
+  Whether this user account has been archived (deactivated).
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 timestamp of when the account was created.
+</ResponseField>
+
+```bash
+curl -X GET https://pamodzi-bbe9f0671866.herokuapp.com/users \
+  -H "Authorization: Bearer <your-admin-token>"
+```
+
+---
+
+## GET /users/{user_id}
+
+Returns the full details for a single user account, identified by UUID.
+
+**Authentication required:** Admin or Agent Bearer token
+
+<ParamField path="user_id" type="string" required>
+  UUID of the user to retrieve.
+</ParamField>
+
+<ResponseField name="user_id" type="string">
+  UUID of the user record.
+</ResponseField>
+
+<ResponseField name="first_name" type="string">
+  User's given name.
+</ResponseField>
+
+<ResponseField name="last_name" type="string">
+  User's family name.
+</ResponseField>
+
+<ResponseField name="phone_number" type="string">
+  User's registered phone number.
+</ResponseField>
+
+<ResponseField name="nrc_number" type="string">
+  User's Zambian National Registration Card number.
+</ResponseField>
+
+<ResponseField name="role" type="string">
+  The user's role. One of `admin`, `cooperative_agent`, `wholesale_buyer`, `farmer`.
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  Email address. Present for admins and wholesale buyers; `null` for agents and farmers.
+</ResponseField>
+
+<ResponseField name="is_archived" type="boolean">
+  Whether this account has been archived.
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 timestamp of account creation.
+</ResponseField>
+
+```bash
+curl -X GET https://pamodzi-bbe9f0671866.herokuapp.com/users/a1b2c3d4-e5f6-7890-abcd-ef1234567890 \
+  -H "Authorization: Bearer <your-admin-or-agent-token>"
+```
+
+---
+
+## POST /users
+
+Creates a new user account. Use this endpoint to add platform users when you need direct control over the user record. For farmer onboarding, prefer [`POST /farmers/onboard`](#post-farmers-onboard) which handles cooperative association in a single call.
+
+**Authentication required:** Admin Bearer token
+
+<ParamField body="first_name" type="string" required>
+  User's given name. 1–100 characters.
+</ParamField>
+
+<ParamField body="last_name" type="string" required>
+  User's family name. 1–100 characters.
+</ParamField>
+
+<ParamField body="phone_number" type="string" required>
+  User's mobile phone number. Must be unique across all user accounts.
+</ParamField>
+
+<ParamField body="nrc_number" type="string" required>
+  Zambian National Registration Card number. Must be unique across all user accounts. Max 20 characters.
+</ParamField>
+
+<ParamField body="role" type="string" required>
+  The role to assign. One of `admin`, `cooperative_agent`, `wholesale_buyer`, `farmer`.
+</ParamField>
+
+<ParamField body="email" type="string">
+  Email address. Required for admin and wholesale buyer roles.
+</ParamField>
+
+<ResponseField name="user_id" type="string">
+  UUID of the newly created user record.
+</ResponseField>
+
+<ResponseField name="role" type="string">
+  The role assigned to the new user.
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 timestamp of account creation.
+</ResponseField>
+
+```bash
+curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/users \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your-admin-token>" \
+  -d '{
+    "first_name": "Mutale",
+    "last_name": "Bwalya",
+    "phone_number": "+260977000300",
+    "nrc_number": "345678/90/1",
+    "role": "cooperative_agent",
+    "email": null
+  }'
+```
+
+---
+
+## POST /users/{user_id}/edit
+
+Updates the details of an existing user account. You can change any mutable user field — name, contact information, or email address.
+
+**Authentication required:** Admin Bearer token
+
+<ParamField path="user_id" type="string" required>
+  UUID of the user account to update.
+</ParamField>
+
+<ParamField body="first_name" type="string">
+  Updated given name. 1–100 characters.
+</ParamField>
+
+<ParamField body="last_name" type="string">
+  Updated family name. 1–100 characters.
+</ParamField>
+
+<ParamField body="phone_number" type="string">
+  Updated mobile phone number. Must remain unique.
+</ParamField>
+
+<ParamField body="email" type="string">
+  Updated email address. Must remain unique.
+</ParamField>
+
+<ResponseField name="user_id" type="string">
+  UUID of the updated user record.
+</ResponseField>
+
+<ResponseField name="first_name" type="string">
+  Updated given name.
+</ResponseField>
+
+<ResponseField name="last_name" type="string">
+  Updated family name.
+</ResponseField>
+
+<ResponseField name="phone_number" type="string">
+  Updated phone number.
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  Updated email address.
+</ResponseField>
+
+```bash
+curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/users/a1b2c3d4-e5f6-7890-abcd-ef1234567890/edit \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your-admin-token>" \
+  -d '{
+    "first_name": "Mutale",
+    "last_name": "Banda",
+    "phone_number": "+260977000301"
+  }'
+```
+
+---
+
+## POST /users/{user_id}/archive
+
+Deactivates a user account. The user can no longer log in or perform any platform actions. The account record is retained for audit purposes.
+
+**Authentication required:** Admin Bearer token
+
+<ParamField path="user_id" type="string" required>
+  UUID of the user account to archive.
+</ParamField>
+
+<ResponseField name="message" type="string">
+  A confirmation message, e.g. `"User archived successfully."`.
+</ResponseField>
+
+<ResponseField name="user_id" type="string">
+  UUID of the archived user record.
+</ResponseField>
+
+<Warning>
+  Archiving takes effect immediately. The user loses all platform access at the moment this call is made.
+</Warning>
+
+```bash
+curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/users/a1b2c3d4-e5f6-7890-abcd-ef1234567890/archive \
+  -H "Authorization: Bearer <your-admin-token>"
 ```

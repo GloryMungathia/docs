@@ -1,20 +1,20 @@
 ---
-title: "Market Price Endpoints — Pamodzi API Reference"
+title: "Market Price Endpoints — Pamodzi API Reference Guide"
 sidebarTitle: "Market Prices"
-description: "REST API reference for Pamodzi market price endpoints — retrieve current and historical commodity prices by crop type and province in Zambian Kwacha (ZMW)."
+description: "REST API reference for Pamodzi market prices — retrieve current commodity prices by crop type and Zambian province, denominated in ZMW per 50 kg bag."
 ---
 
-The market price endpoints provide current and historical commodity prices for Zambia's major crop types, broken down by province. Prices are sourced from the Humanitarian Data Exchange (HDX) and are denominated in ZMW per 50 kg bag. The platform syncs prices daily at startup and refreshes them on a 30-day schedule via a background APScheduler job.
+The market price endpoints provide current and historical commodity prices for Zambia's major crop types, broken down by province. Prices are sourced from the Humanitarian Data Exchange (HDX) and are denominated in ZMW per 50 kg bag. The platform syncs prices at startup and refreshes them on a regular schedule.
 
 <Tip>
-  Market prices are refreshed daily. The `recorded_at` field on each price record shows when that specific price was last updated from the upstream HDX data source.
+  Market prices are refreshed regularly. Check the `recorded_at` field on each price record to see when that specific price was last updated from the upstream data source.
 </Tip>
 
 ---
 
 ## Supported Provinces
 
-The 10 Zambian provinces supported by the market price endpoints:
+The following 10 Zambian provinces are supported by the market price endpoints:
 
 `Central` · `Copperbelt` · `Eastern` · `Luapula` · `Lusaka` · `Muchinga` · `Northern` · `North-Western` · `Southern` · `Western`
 
@@ -104,9 +104,9 @@ curl -X GET "https://pamodzi-bbe9f0671866.herokuapp.com/market-prices/current?pr
 
 ## GET /market-prices
 
-Returns all market price records stored in the platform database. When called without query parameters, returns all records across all provinces and all dates. Use the optional `province` query parameter to filter results to a single province. Requires admin authentication for full access.
+Returns all market price records stored in the platform. When called without query parameters, returns all records across all provinces and all dates. Use the optional `province` query parameter to filter results to a single province.
 
-**Authentication required:** Admin Bearer token (for all records); public access when filtered by province
+**Authentication required:** Admin Bearer token (for all records)
 
 <ParamField query="province" type="string">
   Optional. Filter results to a specific Zambian province. When supplied, returns all price records for that province across all dates.
@@ -137,20 +137,21 @@ Returns all market price records stored in the platform database. When called wi
 curl -X GET https://pamodzi-bbe9f0671866.herokuapp.com/market-prices \
   -H "Authorization: Bearer <your-admin-token>"
 
-# Filtered by province (public)
-curl -X GET "https://pamodzi-bbe9f0671866.herokuapp.com/market-prices?province=Copperbelt"
+# Filtered by province (Admin)
+curl -X GET "https://pamodzi-bbe9f0671866.herokuapp.com/market-prices?province=Copperbelt" \
+  -H "Authorization: Bearer <your-admin-token>"
 ```
 
 ---
 
 ## GET /market-prices/history
 
-Returns historical price records for a specific commodity and province combination. Use this to chart price trends over time for a given crop in a given region. The `commodity` parameter uses the HDX commodity name format.
+Returns historical price records for a specific commodity and province combination. Use this to chart price trends over time for a given crop in a given region.
 
 **Authentication required:** None
 
 <ParamField query="commodity" type="string" required>
-  The HDX commodity name to retrieve history for. Examples: `Maize (white)`, `Sorghum`, `Groundnuts (shelled)`, `Millet (finger)`.
+  The HDX commodity name to retrieve history for. Use the exact HDX name: `Maize (white)`, `Sorghum`, `Groundnuts (shelled)`, or `Millet (finger)`.
 </ParamField>
 
 <ParamField query="province" type="string" required>

@@ -1,7 +1,7 @@
 ---
-title: "Authentication Endpoints — Pamodzi API Reference"
+title: "Authentication Endpoints — Pamodzi API Reference Guide"
 sidebarTitle: "Auth"
-description: "REST API reference for Pamodzi authentication endpoints — login for all roles, two-factor verification, password reset, admin onboarding, and logout."
+description: "REST API reference for Pamodzi authentication — login for all four roles, two-factor verification, password reset, admin onboarding, and logout."
 ---
 
 The authentication endpoints handle login for all four user roles (admin, cooperative agent, wholesale buyer, and farmer), two-factor verification, admin onboarding, and logout. Most protected endpoints require a valid Bearer token obtained from these endpoints. Tokens are RS256-signed JWTs with a two-hour lifetime and must be passed in the `Authorization: Bearer <token>` header on every protected request.
@@ -9,6 +9,40 @@ The authentication endpoints handle login for all four user roles (admin, cooper
 <Note>
   Admins and wholesale buyers go through a mandatory two-step flow: first call the role-specific login endpoint to receive a `twofa_session_token`, then exchange it plus the OTP at `/auth/verify-2fa` to receive the final `access_token`. Cooperative agents and farmers receive an `access_token` directly on successful login.
 </Note>
+
+---
+
+## POST /auth/login/admin/form
+
+Authenticates a platform administrator using an OAuth2 password-grant form submission. On success, returns a `twofa_session_token` and dispatches a one-time password to the admin's registered contact. You then call [`POST /auth/verify-2fa`](#post-auth-verify-2fa) with that token and the OTP to receive a full `access_token`. You must submit this request as `application/x-www-form-urlencoded`, not JSON.
+
+**Authentication required:** None
+
+<Warning>
+  This endpoint accepts `application/x-www-form-urlencoded` only — not JSON. Use `-d` form encoding in curl or set the correct `Content-Type` header in your HTTP client.
+</Warning>
+
+<ParamField body="username" type="string" required>
+  The admin's registered email address. Passed as the OAuth2 `username` field.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  The admin's account password.
+</ParamField>
+
+<ResponseField name="twofa_session_token" type="string">
+  A short-lived session token (TTL: 5 minutes). Pass this to `/auth/verify-2fa` along with the OTP to receive a full access token.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  A human-readable status message confirming that the OTP has been dispatched.
+</ResponseField>
+
+```bash
+curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/auth/login/admin/form \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "username=admin%40example.com&password=AdminPassword123%21"
+```
 
 ---
 
@@ -23,11 +57,11 @@ Authenticates a wholesale buyer with email and password. On success, the platfor
 </ParamField>
 
 <ParamField body="password" type="string" required>
-  The buyer's account password. Minimum 8 characters.
+  The buyer's account password.
 </ParamField>
 
 <ResponseField name="twofa_session_token" type="string">
-  A short-lived Redis-backed session token (TTL: 5 minutes). Pass this to `/auth/verify-2fa` along with the OTP to receive a full access token.
+  A short-lived session token (TTL: 5 minutes). Pass this to `/auth/verify-2fa` along with the OTP to receive a full access token.
 </ResponseField>
 
 <ResponseField name="message" type="string">
@@ -45,39 +79,6 @@ curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/auth/login/buyer \
 
 ---
 
-## POST /auth/login/agent
-
-Authenticates a cooperative agent using their `staff_id` and password. Returns a full JWT access token directly — no 2FA step is required for agents.
-
-**Authentication required:** None
-
-<ParamField body="staff_id" type="string" required>
-  The agent's platform-assigned staff identifier (max 20 characters).
-</ParamField>
-
-<ParamField body="password" type="string" required>
-  The agent's account password. Minimum 8 characters.
-</ParamField>
-
-<ResponseField name="access_token" type="string">
-  A signed RS256 JWT. Valid for 2 hours. Pass this as `Authorization: Bearer <token>` on all protected requests.
-</ResponseField>
-
-<ResponseField name="token_type" type="string">
-  Always `"bearer"`.
-</ResponseField>
-
-```bash
-curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/auth/login/agent \
-  -H "Content-Type: application/json" \
-  -d '{
-    "staff_id": "AGT-001",
-    "password": "AgentPassword123!"
-  }'
-```
-
----
-
 ## POST /auth/login/farmer
 
 Authenticates a farmer using their phone number and 4-digit PIN. Returns a full JWT access token directly. This endpoint is primarily called by the USSD gateway on behalf of the farmer; use it programmatically only when building custom farmer-facing tooling.
@@ -89,7 +90,7 @@ Authenticates a farmer using their phone number and 4-digit PIN. Returns a full 
 </ParamField>
 
 <ParamField body="pin" type="string" required>
-  The farmer's 4-digit numerical PIN. Stored as an Argon2id hash; never transmitted after initial setup.
+  The farmer's 4-digit numerical PIN.
 </ParamField>
 
 <ResponseField name="access_token" type="string">
@@ -111,40 +112,35 @@ curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/auth/login/farmer \
 
 ---
 
-## POST /auth/login/admin/form
+## POST /auth/login/agent
 
-Authenticates a platform administrator using an OAuth2 password-grant form submission. On success, returns either a `twofa_session_token` (triggering an OTP dispatch to the admin's registered contact) or — if MFA is already satisfied — a direct `access_token`. You must submit this request as `application/x-www-form-urlencoded`, not JSON.
+Authenticates a cooperative agent using their `staff_id` and password. Returns a full JWT access token directly — no 2FA step is required for agents.
 
 **Authentication required:** None
 
-<ParamField body="username" type="string" required>
-  The admin's registered email address. Passed as the OAuth2 `username` field.
+<ParamField body="staff_id" type="string" required>
+  The agent's platform-assigned staff identifier (max 20 characters).
 </ParamField>
 
 <ParamField body="password" type="string" required>
-  The admin's account password.
+  The agent's account password.
 </ParamField>
 
-<ResponseField name="twofa_session_token" type="string">
-  Present when 2FA is triggered. Pass to `/auth/verify-2fa` with the OTP to complete login.
-</ResponseField>
-
 <ResponseField name="access_token" type="string">
-  Present when a full token is issued directly. Valid for 2 hours.
+  A signed RS256 JWT. Valid for 2 hours. Pass this as `Authorization: Bearer <token>` on all protected requests.
 </ResponseField>
 
 <ResponseField name="token_type" type="string">
   Always `"bearer"`.
 </ResponseField>
 
-<Warning>
-  This endpoint accepts `application/x-www-form-urlencoded` only — not JSON. Use `-d` form encoding in curl or set the correct `Content-Type` header in your HTTP client.
-</Warning>
-
 ```bash
-curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/auth/login/admin/form \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=admin%40example.com&password=AdminPassword123%21"
+curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/auth/login/agent \
+  -H "Content-Type: application/json" \
+  -d '{
+    "staff_id": "AGT-001",
+    "password": "AgentPassword123!"
+  }'
 ```
 
 ---
@@ -208,9 +204,13 @@ curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/auth/forgot-password/ema
 
 ## POST /auth/admin/onboard
 
-Creates a new administrator account. The new admin is assigned the default password `WelcomePamodziAdmin2026!` — they should change it immediately using `/auth/change-password/initial`. You must already be authenticated as an admin to call this endpoint.
+Creates a new administrator account. You must already be authenticated as an admin to call this endpoint.
 
 **Authentication required:** Admin Bearer token
+
+<Note>
+  The very first admin account is provisioned automatically at system startup — there is no self-service path to create it. Use this endpoint only to onboard additional admins once you are already logged in.
+</Note>
 
 <ParamField body="first_name" type="string" required>
   The new admin's given name. 1–100 characters.
@@ -225,7 +225,7 @@ Creates a new administrator account. The new admin is assigned the default passw
 </ParamField>
 
 <ParamField body="phone_number" type="string" required>
-  The new admin's phone number. Used for OTP delivery.
+  The new admin's phone number. Used for OTP delivery during login.
 </ParamField>
 
 <ParamField body="nrc_number" type="string" required>
@@ -239,10 +239,6 @@ Creates a new administrator account. The new admin is assigned the default passw
 <ResponseField name="admin_id" type="string">
   The UUID of the newly created admin record.
 </ResponseField>
-
-<Note>
-  The very first admin account is bootstrapped automatically at startup from environment variables (`ADMIN_EMAIL`, `ADMIN_PASSWORD`, etc.) — there is no self-service path to create it. Use this endpoint only to create additional admins once you are already logged in.
-</Note>
 
 ```bash
 curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/auth/admin/onboard \
@@ -263,14 +259,14 @@ curl -X POST https://pamodzi-bbe9f0671866.herokuapp.com/auth/admin/onboard \
 
 Ends the current session by clearing the session cookie. Returns a success message.
 
-**Authentication required:** None (cookie-based session clear only)
+**Authentication required:** None
 
 <ResponseField name="message" type="string">
   A confirmation message such as `"Logged out successfully."`.
 </ResponseField>
 
 <Warning>
-  This endpoint currently clears the session cookie only. The JWT Bearer token itself is not yet added to the token blacklist on logout, so the token remains technically valid until its 2-hour expiry window passes. Do not rely solely on calling logout to invalidate a token — discard it on the client side immediately.
+  This endpoint clears the session cookie. The JWT Bearer token remains valid until its 2-hour expiry window passes. Discard the token on the client side immediately after calling logout.
 </Warning>
 
 ```bash

@@ -1,17 +1,13 @@
 ---
-title: "Produce Listing and Pool Endpoints — Pamodzi API Reference"
+title: "Produce Listing & Pool Endpoints — Pamodzi API Reference"
 sidebarTitle: "Produce"
-description: "REST API reference for produce listing and produce pool endpoints — list produce via API, view pool status, and manage verification states for farmer listings."
+description: "REST API reference for Pamodzi produce listing and pool endpoints — view listings, verify produce, manage pool allocation, and track aggregation status."
 ---
 
-Produce listing endpoints manage the farmer supply side of the platform. While farmers typically create listings via the USSD interface using their mobile phones, the API provides programmatic access for cooperative agents and admins to list, inspect, verify, and manage those listings. Produce pools are the aggregation layer that connects individual farmer listings to an active demand campaign.
+Produce listing endpoints manage the farmer supply side of the platform. Farmers create produce listings via the USSD interface on their mobile phones. The API provides programmatic access for cooperative agents and admins to inspect, verify, and manage those listings. Produce pools are the aggregation layer connecting individual farmer listings to an active demand campaign.
 
 <Note>
-  Farmers list produce via the USSD interface. The API produce endpoints are primarily used by cooperative agents for verification workflows and by admins for platform oversight.
-</Note>
-
-<Note>
-  For the complete endpoint list — including produce listing creation, update, archiving, and pool allocation trigger — refer to the interactive Swagger docs at [https://pamodzi-bbe9f0671866.herokuapp.com/docs](https://pamodzi-bbe9f0671866.herokuapp.com/docs).
+  Farmers list produce via USSD — not through this API. The produce endpoints documented here are primarily for cooperative agents running verification workflows and admins performing platform oversight.
 </Note>
 
 ---
@@ -20,19 +16,19 @@ Produce listing endpoints manage the farmer supply side of the platform. While f
 
 Each produce listing moves through the following status values as it progresses through the platform flow:
 
-| Status            | Description                                                                              |
-|-------------------|------------------------------------------------------------------------------------------|
-| `not_aggregated`  | The listing exists but has not yet been matched to any campaign pool.                    |
-| `aggregated`      | The listing has been allocated to a campaign's produce pool and is awaiting verification.|
-| `approved`        | An agent has physically verified the listing — weight, moisture, and grade confirmed.    |
-| `rejected`        | The listing failed verification and has been excluded from the pool.                     |
-| `archived`        | The listing has been archived and is no longer visible in active views.                  |
+| Status           | Description                                                                              |
+|------------------|------------------------------------------------------------------------------------------|
+| `not_aggregated` | The listing exists but has not yet been matched to any campaign pool.                    |
+| `aggregated`     | The listing has been allocated to a campaign's produce pool and is awaiting verification.|
+| `approved`       | An agent has physically verified the listing — weight, moisture, and grade confirmed.    |
+| `rejected`       | The listing failed verification and has been excluded from the pool.                     |
+| `archived`       | The listing has been archived and is no longer visible in active views.                  |
 
 ---
 
 ## GET /produce-listings/
 
-Returns all produce listings on the platform. You can use this endpoint to review the full supply-side picture across all cooperatives and campaigns.
+Returns all produce listings on the platform. Use this endpoint to review the full supply-side picture across all cooperatives and campaigns.
 
 **Authentication required:** Admin or Agent Bearer token
 
@@ -48,23 +44,19 @@ Returns all produce listings on the platform. You can use this endpoint to revie
   UUID of the cooperative the farmer belongs to.
 </ResponseField>
 
-<ResponseField name="crop_type" type="string">
+<ResponseField name="produce_type" type="string">
   The crop type offered. One of `maize`, `sorghum`, `groundnuts`, `millet`.
 </ResponseField>
 
-<ResponseField name="quantity_kg" type="number">
-  Quantity offered by the farmer in kilograms.
+<ResponseField name="produce_quantity" type="number">
+  Quantity offered by the farmer in kilograms. Always greater than 0.
 </ResponseField>
 
-<ResponseField name="listing_status" type="string">
+<ResponseField name="produce_status" type="string">
   Current status of the listing. One of `not_aggregated`, `aggregated`, `approved`, `rejected`, `archived`.
 </ResponseField>
 
-<ResponseField name="province" type="string">
-  Province from which the produce is available.
-</ResponseField>
-
-<ResponseField name="created_at" type="string">
+<ResponseField name="listed_at" type="string">
   ISO 8601 timestamp of when the listing was created.
 </ResponseField>
 
@@ -97,35 +89,19 @@ Returns the full details for a single produce listing, identified by its UUID.
   UUID of the farmer's cooperative.
 </ResponseField>
 
-<ResponseField name="crop_type" type="string">
-  Crop type offered.
+<ResponseField name="produce_type" type="string">
+  Crop type offered. One of `maize`, `sorghum`, `groundnuts`, `millet`.
 </ResponseField>
 
-<ResponseField name="quantity_kg" type="number">
+<ResponseField name="produce_quantity" type="number">
   Quantity offered in kilograms.
 </ResponseField>
 
-<ResponseField name="listing_status" type="string">
-  Current status of the listing.
+<ResponseField name="produce_status" type="string">
+  Current status of the listing. One of `not_aggregated`, `aggregated`, `approved`, `rejected`, `archived`.
 </ResponseField>
 
-<ResponseField name="grade" type="string">
-  Grade assigned at verification. Null before verification.
-</ResponseField>
-
-<ResponseField name="moisture_content" type="number">
-  Moisture content recorded at verification. Null before verification.
-</ResponseField>
-
-<ResponseField name="actual_weight" type="number">
-  Physical weight recorded by the agent at verification. Null before verification.
-</ResponseField>
-
-<ResponseField name="province" type="string">
-  Province of origin.
-</ResponseField>
-
-<ResponseField name="created_at" type="string">
+<ResponseField name="listed_at" type="string">
   ISO 8601 timestamp of listing creation.
 </ResponseField>
 
@@ -138,7 +114,7 @@ curl -X GET https://pamodzi-bbe9f0671866.herokuapp.com/produce-listings/b2c3d4e5
 
 ## POST /produce-pools/verify-listing/{produce_id}
 
-Approves or rejects an individual produce listing within a campaign pool. The agent physically inspects the produce — weighing it and measuring moisture content — then submits the outcome via this endpoint. Approved listings contribute their `actual_weight` toward the campaign's pool total; rejected listings are excluded.
+Approves or rejects an individual produce listing within a campaign pool. The agent physically inspects the produce — weighing it and measuring moisture content — then submits the outcome via this endpoint. Approved listings contribute their measured weight toward the campaign's pool total; rejected listings are excluded.
 
 **Authentication required:** Agent Bearer token
 
@@ -159,7 +135,7 @@ Approves or rejects an individual produce listing within a campaign pool. The ag
 </ParamField>
 
 <ParamField body="moisture_content" type="number" required>
-  Measured moisture content as a percentage. Listings above the campaign's `moisture_content` threshold should be rejected.
+  Measured moisture content as a percentage. Listings above the campaign's moisture threshold should be rejected.
 </ParamField>
 
 <ResponseField name="message" type="string">
@@ -170,7 +146,7 @@ Approves or rejects an individual produce listing within a campaign pool. The ag
   UUID of the verified listing.
 </ResponseField>
 
-<ResponseField name="listing_status" type="string">
+<ResponseField name="produce_status" type="string">
   Updated listing status — `"approved"` or `"rejected"`.
 </ResponseField>
 
@@ -194,7 +170,7 @@ Returns all produce pools. Each pool represents the aggregation of farmer listin
 
 **Authentication required:** Admin, Buyer, or Agent Bearer token
 
-<ResponseField name="pool_id" type="string">
+<ResponseField name="produce_pool_id" type="string">
   UUID of the produce pool.
 </ResponseField>
 
@@ -202,16 +178,12 @@ Returns all produce pools. Each pool represents the aggregation of farmer listin
   UUID of the demand campaign this pool is attached to.
 </ResponseField>
 
-<ResponseField name="total_allocated_kg" type="number">
-  Total kilograms currently allocated to this pool (sum of all `aggregated` or `approved` listing quantities).
+<ResponseField name="allocated_weight" type="number">
+  Total kilograms currently allocated to this pool.
 </ResponseField>
 
-<ResponseField name="total_approved_kg" type="number">
-  Total kilograms from verified and approved listings.
-</ResponseField>
-
-<ResponseField name="province" type="string">
-  Province for this pool.
+<ResponseField name="created_at" type="string">
+  ISO 8601 timestamp of when the pool was created.
 </ResponseField>
 
 ```bash
@@ -221,17 +193,17 @@ curl -X GET https://pamodzi-bbe9f0671866.herokuapp.com/produce-pools/ \
 
 ---
 
-## GET /produce-pools/{produce_pool_id}
+## GET /produce-pools/{pool_id}
 
 Returns detailed information for a single produce pool, including individual listing statuses, total allocated weight, and pool fulfilment progress relative to the campaign target.
 
 **Authentication required:** Admin, Buyer, or Agent Bearer token
 
-<ParamField path="produce_pool_id" type="string" required>
+<ParamField path="pool_id" type="string" required>
   UUID of the produce pool to retrieve.
 </ParamField>
 
-<ResponseField name="pool_id" type="string">
+<ResponseField name="produce_pool_id" type="string">
   UUID of the produce pool.
 </ResponseField>
 
@@ -239,12 +211,12 @@ Returns detailed information for a single produce pool, including individual lis
   UUID of the associated demand campaign.
 </ResponseField>
 
-<ResponseField name="total_allocated_kg" type="number">
+<ResponseField name="allocated_weight" type="number">
   Total kilograms allocated to this pool.
 </ResponseField>
 
-<ResponseField name="total_approved_kg" type="number">
-  Total kilograms from verified and approved listings.
+<ResponseField name="created_at" type="string">
+  ISO 8601 timestamp of pool creation.
 </ResponseField>
 
 <ResponseField name="listings" type="array">
@@ -257,17 +229,17 @@ Returns detailed information for a single produce pool, including individual lis
     <ResponseField name="farmer_id" type="string">
       UUID of the farmer.
     </ResponseField>
-    <ResponseField name="listing_status" type="string">
+    <ResponseField name="produce_status" type="string">
       Current status of this listing within the pool.
     </ResponseField>
     <ResponseField name="actual_weight" type="number">
-      Verified weight in kilograms. Null until verification.
+      Verified weight in kilograms. `null` until verification.
     </ResponseField>
     <ResponseField name="grade" type="string">
-      Assigned grade. Null until verification.
+      Assigned grade. `null` until verification.
     </ResponseField>
     <ResponseField name="moisture_content" type="number">
-      Measured moisture content. Null until verification.
+      Measured moisture content. `null` until verification.
     </ResponseField>
   </Expandable>
 </ResponseField>
@@ -281,7 +253,7 @@ curl -X GET https://pamodzi-bbe9f0671866.herokuapp.com/produce-pools/c3d4e5f6-a7
 
 ## POST /produce-pools/trigger-allocation/{campaign_id}
 
-Manually triggers the allocation engine for a specific campaign, matching eligible `not_aggregated` farmer listings to the campaign's pool based on crop type, grade, province, and cooperative. Under normal operation the platform runs allocation automatically; use this endpoint to force a re-run after manual data corrections.
+Manually triggers the allocation engine for a specific campaign, matching eligible `not_aggregated` farmer listings to the campaign's pool based on crop type, grade, province, and cooperative. The platform runs allocation automatically; use this endpoint to force a re-run after manual data corrections.
 
 **Authentication required:** Admin Bearer token
 

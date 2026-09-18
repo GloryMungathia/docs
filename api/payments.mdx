@@ -1,10 +1,10 @@
 ---
 title: "Payment Transaction Endpoints — Pamodzi API Reference"
 sidebarTitle: "Payments"
-description: "REST API reference for Pamodzi payment endpoints — view transaction history, check merchant account balance, and track payout status for campaigns."
+description: "REST API reference for Pamodzi payment endpoints — initiate campaign funding, view transaction history, process cooperative payouts, and issue refunds."
 ---
 
-The payment endpoints give buyers and admins visibility into the full payment lifecycle — from campaign funding through payout disbursement to cooperatives and farmers. All payments are processed via Flutterwave. The platform retains a 5% fee from the gross campaign amount and releases the remaining 95% as the net payout to the cooperative after produce is verified and collected.
+The payment endpoints give buyers and admins visibility into the full payment lifecycle — from campaign funding through payout disbursement to cooperatives. All payments are processed via Flutterwave. The platform retains a 5% fee from the gross campaign amount and releases the remaining 95% as the net payout to the cooperative after produce is verified and collected.
 
 <Note>
   All payments are processed via Flutterwave. For payment disputes or failed transactions, use the Flutterwave reference ID returned in the transaction record to open a support case with Flutterwave directly.
@@ -25,12 +25,14 @@ The payment endpoints give buyers and admins visibility into the full payment li
 
 ## Transaction Fields Reference
 
+The following fields appear on payment transaction records returned by the endpoints below:
+
 | Field                  | Type    | Description                                                                          |
 |------------------------|---------|--------------------------------------------------------------------------------------|
 | `transaction_id`       | UUID    | Unique identifier for this transaction record.                                       |
 | `campaign_id`          | UUID    | The demand campaign this transaction is associated with.                             |
 | `buyer_id`             | UUID    | The wholesale buyer who originated the payment.                                      |
-| `cooperative_id`       | UUID    | The cooperative receiving the payout (on outgoing transactions).                    |
+| `cooperative_id`       | UUID    | The cooperative receiving the payout (on outgoing payout transactions).             |
 | `amount`               | number  | Gross transaction amount in ZMW.                                                     |
 | `transaction_fee`      | number  | Flutterwave processing fee in ZMW.                                                   |
 | `platform_fee`         | number  | Pamodzi platform fee (5% of gross amount) retained before payout.                   |
@@ -104,11 +106,15 @@ Returns the payment transaction history for the authenticated user. Buyers see o
 </ResponseField>
 
 <ResponseField name="cooperative_id" type="string">
-  UUID of the cooperative receiving the payout. Null on inbound payment transactions.
+  UUID of the cooperative receiving the payout. `null` on inbound payment transactions.
 </ResponseField>
 
 <ResponseField name="amount" type="number">
   Gross transaction amount in ZMW.
+</ResponseField>
+
+<ResponseField name="transaction_fee" type="number">
+  Flutterwave processing fee in ZMW.
 </ResponseField>
 
 <ResponseField name="platform_fee" type="number">
@@ -173,7 +179,7 @@ curl -X GET https://pamodzi-bbe9f0671866.herokuapp.com/payments/verify/TXN-20240
 
 ## POST /payments/payout/{campaign_id}/{cooperative_id}
 
-Processes a payout disbursement from the platform merchant account to a cooperative's mobile money account. Call this after produce has been verified and the buyer has collected. The platform retains its 5% fee and transfers the `net_payout_amount` to the cooperative.
+Processes a payout disbursement to a cooperative's mobile money account. Call this after produce has been verified and the buyer has collected. The platform retains its 5% fee and transfers the `net_payout_amount` to the cooperative.
 
 **Authentication required:** Admin Bearer token
 
@@ -265,21 +271,21 @@ Returns the current balance and status of the Pamodzi platform merchant account 
   UUID of the merchant account record.
 </ResponseField>
 
-<ResponseField name="balance" type="number">
+<ResponseField name="current_balance" type="number">
   Current balance in ZMW held in the merchant account.
+</ResponseField>
+
+<ResponseField name="initial_balance" type="number">
+  Opening balance in ZMW recorded when the account was created.
 </ResponseField>
 
 <ResponseField name="currency" type="string">
   Always `"ZMW"`.
 </ResponseField>
 
-<ResponseField name="flutterwave_account_id" type="string">
-  The Flutterwave sub-account identifier linked to this merchant account.
+<ResponseField name="is_active" type="string">
+  The current operational status of the merchant account.
 </ResponseField>
-
-<Tip>
-  For the complete payment endpoint list, refer to the interactive Swagger docs at [https://pamodzi-bbe9f0671866.herokuapp.com/docs](https://pamodzi-bbe9f0671866.herokuapp.com/docs).
-</Tip>
 
 ```bash
 curl -X GET https://pamodzi-bbe9f0671866.herokuapp.com/merchant-account/ \
